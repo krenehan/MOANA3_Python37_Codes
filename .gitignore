@@ -1,3 +1,9 @@
+# Ignore data files
+*/*/data/*
+
+# Ignore the docs
+docs/*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
