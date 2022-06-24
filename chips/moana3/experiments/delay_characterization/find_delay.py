@@ -48,3 +48,14 @@ def find_delay(t, y1, y2):
     # Calculate delay
     delay = t_rise[1] - t_rise[0]
     return delay
+
+
+def mean_time(t, y1, y2):
+    
+    y = (y1, y2)
+    
+    # Calculate mean time of each curve
+    mt = [np.average(t, weights=y[i]) for i in range(2)]
+    
+    delay = mt[1] - mt[0]
+    return delay
