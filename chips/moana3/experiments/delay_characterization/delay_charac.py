@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 from find_delay import *
 
 # reading from csv data
-data1 = pd.read_csv('../../data/delay_characterization/dword_0to100_rising_sub354.csv', header = None)
-data2 = pd.read_csv('../../data/delay_characterization/dword_101to200_rising_sub454.csv', header = None)
-data3 = pd.read_csv('../../data/delay_characterization/dword_201to256_rising_sub554.csv', header = None)
+data1 = pd.read_csv('../../data/dword_0to100_rising_sub354.csv', header = None)
+data2 = pd.read_csv('../../data/dword_101to200_rising_sub454.csv', header = None)
+data3 = pd.read_csv('../../data/dword_201to256_rising_sub554.csv', header = None)
 
 # dropping null value columns to avoid errors
 data1.dropna(inplace = True)
@@ -56,9 +56,26 @@ for h in range(len(arr_combined)):
 # Find delay steps
 arr_delayed = np.empty((255), dtype = float)
 for h in range(len(arr_delayed)):
-    arr_delayed[h] = find_delay(t,arr_combined[h],arr_combined[h+1]) * -1
+    arr_delayed[h] = mean_time(t,arr_combined[h],arr_combined[h+1]) * -1
+
+# Find delay line for each step and convert from ps to ns 
+step = np.empty((254), dtype = float)     
+for h in range (len(step)):
+    if (h == 0):
+        step[0] = arr_delayed[0]/1000
+    elif (h == 1):
+        step[1] = np.sum((arr_delayed[0],arr_delayed[h]))/1000
+    else:
+        step[h] = np.sum((step[h-1],arr_delayed[h]/1000))
+
+step = np.round(step,3)
+
+# Return delay line for each step  
+def get_step():
+    return step    
+  
     
-# Plot delay step versus code
+#Plot delay step versus code
 plt.figure()
 plt.plot(arr_delayed)
 plt.title("Delay Step vs Input Code")

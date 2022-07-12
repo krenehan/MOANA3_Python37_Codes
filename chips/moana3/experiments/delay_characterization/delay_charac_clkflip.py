@@ -32,38 +32,60 @@ arr2_padded = np.empty((100,350), dtype=int)
 arr3_padded = np.empty((55,350), dtype=int)
 t = np.linspace(0,349,num = 350)*65 
 
+# Pad histograms to remove subtractor value change effects
 for histogram in range(len(arr1)):
     arr1_padded[histogram] = np.concatenate((zero, zero,arr1[histogram] ))
     plt.plot(arr1_padded[histogram])
-
     
-
 for i in range(len(arr2)):
     arr2_padded[i] = np.concatenate((zero,arr2[i], zero))   
     plt.plot(arr2_padded[i])
-    
     
 for j in range(len(arr3)):
     arr3_padded[j] = np.concatenate((arr3[j],zero,zero))    
     plt.plot(arr3_padded[j])
 
+# Concatenate arrays
 arr_combined = np.concatenate((arr1_padded,arr2_padded,arr3_padded))
 
+# Plot raw data
 for h in range(len(arr_combined)):
     plt.plot(arr_combined[h])
     
 delay = mean_time(t,arr_combined[0],arr_combined[1])
 arr_delayed = np.empty((255), dtype = float)
 
+# Find delay steps
 for h in range(len(arr_delayed)):
-    arr_delayed[h] = mean_time(t,arr_combined[h],arr_combined[h+1])
-    
-    
-    
+    arr_delayed[h] = mean_time(t,arr_combined[h],arr_combined[h+1])*-1
 
+# Find delay line for each step and convert from ps to ns     
+step = np.empty((254), dtype = float)     
+for h in range (len(step)):
+    if (h == 0):
+        step[0] = arr_delayed[0]/1000
+    elif (h == 1):
+        step[1] = np.sum((arr_delayed[0],arr_delayed[h]))/1000
+    else:
+        step[h] = np.sum((step[h-1],arr_delayed[h]/1000))
+        
+step = np.round(step,3)    
 
+def get_step_clkflip():
+    return step   
+    
+# Plot delay step versus code
+plt.figure()
+plt.plot(arr_delayed)
+plt.title("Delay Step vs Input Code")
+plt.xlabel("Delay Step")
+plt.ylabel("Delay Step (ps)")
 
-# print(delay)
-# # plt.plot(arr1[0])
-# # plt.plot(arr2[0])
-# # plt.plot(arr3[0])
+# Print some stats
+print("Mean Step (ps): " + str(np.mean(arr_delayed)))
+print("Median Step (ps): " + str(np.median(arr_delayed)))
+print("Standard Deviation (ps): " + str(np.std(arr_delayed)))
+print("Minimum Delay Step (ps): " + str(np.amin(arr_delayed)))
+print("Maximum Delay Step (ps): " + str(np.amax(arr_delayed)))
+print("Full Range (ns): " + str(np.sum(arr_delayed)/1000))    
+
