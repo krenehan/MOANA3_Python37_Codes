@@ -92,8 +92,8 @@ try:
     # =============================================================================
     # Platform Setup
     # =============================================================================
-    dut = test_platform.TestPlatform("moana2")
-    dut.init_fpga(bitfile_path = paths.bitfile_path, init_pll=True, refclk_freq=100e6)
+    dut = test_platform.TestPlatform("moana3")
+    dut.init_fpga(bitfile_path = paths.bitfile_path)
     
     # Print the serial number of the device
     serial_number = dut.fpga_interface.xem.GetSerialNumber()
@@ -103,11 +103,7 @@ try:
     # =============================================================================
     # Power Setup - Initialize power supplies
     # =============================================================================
-    # Enable power level shifter
-    dut.enable_power_level_shifter()
-    
-    # VDD SM Supply 
-    dut.enable_vdd_sm_supply()
+    dut.enable_hvdd_ldo_supply()
     time.sleep(ldo_wait)
     
     
@@ -129,37 +125,39 @@ try:
         scan_bits[i].TDCStartSelect        = '0'*8 if ExternalStart else '1'*8
         scan_bits[i].TDCStopSelect         = '0'*8 if ExternalStop else '1'*8
         scan_bits[i].TDCDisable            = '11111111'
-        scan_bits[i].TDCDCBoost            = '0' if TDCDCBoost else '1'
+        scan_bits[i].TDCDCBoost            = '0'*8 if TDCDCBoost else '1'*8
         
         # Configure Pattern Counter
-        scan_bits[i].MeasPerPatt           = np.binary_repr(32000, 15)
+        scan_bits[i].MeasPerPatt           = np.binary_repr(100000, 24)
         scan_bits[i].MeasCountEnable       = '1'
         
         # Configuring Delay Lines
         scan_bits[i].AQCDLLCoarseWord      = np.binary_repr(0, 4)
         scan_bits[i].AQCDLLFineWord        = np.binary_repr(0, 3)
-        scan_bits[i].DriverDLLWord         = np.binary_repr(1 << 3, 4)
+        scan_bits[i].AQCDLLFinestWord      = np.binary_repr(0, 1)
+        scan_bits[i].DriverDLLWord         = np.binary_repr(31,5)
         scan_bits[i].ClkFlip               = '0'
-        scan_bits[i].ClkBypass             = '1'
+        scan_bits[i].ClkBypass             = '0'
         
         # Configure pattern reset signal
-        scan_bits[i].PattResetExtSel       = '1' if PatternResetWithTriggerExt else '0'
+        scan_bits[i].PattResetControlledByTriggerExt       = '1' if PatternResetWithTriggerExt else '0'
         scan_bits[i].PattResetExtEnable    = '1' if PatternResetWithExternalSignal else '0'
         
         # Configure VCSELs
-        scan_bits[i].VCSELEnableExt        = '1' if VCSELEnableExt else '0'
-        scan_bits[i].VCSELEnableSel        = '1' if VCSELEnableThroughScan else '0'
-        scan_bits[i].VCSELWave1Sel         = '0'
-        scan_bits[i].VCSELWave2Sel         = '0'
+        scan_bits[i].VCSELEnableWithScan        = '1' if VCSELEnableExt else '0'
+        scan_bits[i].VCSELEnableControlledByScan        = '1' if VCSELEnableThroughScan else '0'
+        scan_bits[i].VCSELWave1Enable         = '1'
+        scan_bits[i].VCSELWave2Enable         = '0'
         
         # Configure TxData
         scan_bits[i].TestPattEnable        = '0'
         scan_bits[i].TestDataIn            = np.binary_repr(500, 10)
         scan_bits[i].TxDataExtRequestEnable = '0'
         
+        scan_bits[i].DynamicConfigEnable = '0'
+        
         # Configure subtractor
-        scan_bits[i].TimeOffsetWord        = np.binary_repr(12, 7)
-        scan_bits[i].TimeOffsetWordLSBs    = np.binary_repr(0, 24)
+        scan_bits[i].TimeOffsetWord        = np.binary_repr(12, 10)
         scan_bits[i].SubtractorBypass      = '1'
         
         # Configure SPADs
@@ -269,7 +267,7 @@ try:
 
 finally:
     print("Experiment finished")
-    #dut.disable_vdd_sm_supply()
+    # dut.disable_hvdd_ldo_supply()
     if Logging:
         print("Closing log file")
         log_file.close()
