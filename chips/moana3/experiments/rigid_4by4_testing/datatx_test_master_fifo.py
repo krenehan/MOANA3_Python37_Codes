@@ -83,8 +83,8 @@ supplt_aux      = None
 # Platform Setup - Initialize FPGA and chip
 # =============================================================================
 refclk_freq = 50e6
-dut = test_platform.TestPlatform("moana2")
-dut.init_fpga(bitfile_path = paths.bitfile_path, refclk_freq = refclk_freq, tx_refclk_freq = refclk_freq/8, init_pll = True)
+dut = test_platform.TestPlatform("moana3")
+dut.init_fpga(bitfile_path = paths.bitfile_path, refclk_freq=50e6)
 
 try:
     # =============================================================================
@@ -101,13 +101,6 @@ try:
     # Power-up chip and reset
     # =============================================================================
     print("Powering on...")
-    # Enable power level shifter
-    dut.enable_power_level_shifter()
-    dut.enable_vdd_sm_supply()
-    dut.enable_hvdd_ldo_supply()
-    dut.enable_vrst_ldo_supply()
-    dut.enable_cath_sm_supply()
-    dut.enable_vcsel_cath_sm_supply()
     time.sleep(ldo_wait)
     print("Power on done!")
     
@@ -128,50 +121,51 @@ try:
     scan_bits = [dut.chip_infrastructure.get_scan_chain(row[i]).get_scan_chain_segment(cell) for i in range(number_of_chips)]
     
     for i in range(number_of_chips):
-        # Configuring TDC
-        scan_bits[i].TDCStartSelect        = '11111110' if ExternalStart else '1'*8
-        scan_bits[i].TDCStopSelect         = '0'*8 if ExternalStop else '1'*8
-        scan_bits[i].TDCDisable            = '0'*8
-        scan_bits[i].TDCDCBoost            = '0' if TDCDCBoost else '1'
-        
-        
-        # Configure Pattern Counter
-        scan_bits[i].MeasPerPatt           = np.binary_repr(meas_per_patt, 15)
-        scan_bits[i].MeasCountEnable       = '1'
-        
-        # Configuring Delay Lines
-        word = 47
-        coarse = (word & 0b1111000) >> 3
-        fine = word & 0b111
-        scan_bits[i].AQCDLLCoarseWord      = np.binary_repr(coarse, 4)
-        scan_bits[i].AQCDLLFineWord        = np.binary_repr(fine, 3)
-        scan_bits[i].DriverDLLWord         = np.binary_repr(1 << 3, 4)
-        scan_bits[i].ClkFlip               = '1'
-        scan_bits[i].ClkBypass             = '0'
-        
-        # Configure pattern reset signal
-        scan_bits[i].PattResetExtSel       = '1' if PatternResetWithTriggerExt else '0'
-        scan_bits[i].PattResetExtEnable    = '1' if PatternResetWithExternalSignal else '0'
-        
-        # Configure VCSELs
-        scan_bits[i].VCSELEnableExt        = '1' if VCSELEnableExt else '0'
-        scan_bits[i].VCSELEnableSel        = '1' if VCSELEnableThroughScan else '0'
-        scan_bits[i].VCSELWave1Sel         = '1'
-        scan_bits[i].VCSELWave2Sel         = '1'
-        
-        # Configure TxData
-        scan_bits[i].TestPattEnable        = '1'
-        scan_bits[i].TestDataIn            = np.binary_repr(20, 10)
-        scan_bits[i].TxDataExtRequestEnable = '0'
-        
-        # Configure subtractor
-        scan_bits[i].TimeOffsetWord        = np.binary_repr(0, 7)
-        scan_bits[i].TimeOffsetWordLSBs    = np.binary_repr(0, 24)
-        scan_bits[i].SubtractorBypass      = '1'
-        
-        # Configure SPADs
-        scan_bits[i].SPADEnable            = '0'*64
-    
+            
+            # Configure TDC
+            scan_bits[i].TDCStartSelect        = '01111111' if ExternalStart else '1'*8
+            scan_bits[i].TDCStopSelect         = '0'*8 if ExternalStop else '10000000'
+            scan_bits[i].TDCDisable            = '01111111'
+            scan_bits[i].TDCDCBoost            = '01111111' if TDCDCBoost else '1'*8
+            
+            
+            # Configure Pattern Counter
+            scan_bits[i].MeasPerPatt           = np.binary_repr(meas_per_patt, 24)
+            scan_bits[i].MeasCountEnable       = '1'
+            
+            # Configuring Delay Lines
+            dword = 3
+            scan_bits[i].AQCDLLCoarseWord      = np.binary_repr( (dword&0b11110000) >> 4, 4)
+            scan_bits[i].AQCDLLFineWord        = np.binary_repr((dword&0b1110) >> 1, 3)
+            scan_bits[i].AQCDLLFinestWord      = np.binary_repr((dword&0b1), 1)
+            scan_bits[i].DriverDLLWord         = np.binary_repr(5, 5)
+            scan_bits[i].ClkFlip               = '1'
+            scan_bits[i].ClkBypass             = '0'
+            
+            # Configure pattern reset signal
+            scan_bits[i].PattResetControlledByTriggerExt       = '1' if PatternResetWithTriggerExt else '0'
+            scan_bits[i].PattResetExtEnable    = '1' if PatternResetWithExternalSignal else '0'
+            
+            # Configure VCSELs
+            scan_bits[i].VCSELEnableWithScan        = '1' if VCSELEnableExt else '0'
+            scan_bits[i].VCSELEnableControlledByScan        = '1' if VCSELEnableThroughScan else '0'
+            scan_bits[i].VCSELWave1Enable         = '1'
+            scan_bits[i].VCSELWave2Enable         = '1'
+            
+            # Configure TxData
+            scan_bits[i].TestPattEnable        = '0'
+            scan_bits[i].TestDataIn            = np.binary_repr(0, 10)
+            scan_bits[i].TxDataExtRequestEnable = '0'
+            
+            # Configure subtractor
+            scan_bits[i].TimeOffsetWord        = np.binary_repr(454, 10)
+            scan_bits[i].SubtractorBypass      = '0'
+            
+            scan_bits[i].DynamicConfigEnable = '0'
+            
+            # Configure SPADs
+            scan_bits[i].SPADEnable            = '0'*64
+   
     # Make scan bits for the fpga
     for i in range(number_of_chips):
         dut.commit_scan_chain(row[i])
@@ -209,7 +203,10 @@ try:
                                             meas_per_patt       )
         
         # Run capture
-        dut.FrameController.run_capture()
+        dut.FrameController.set_fsm_bypass()
+        time.sleep(4*meas_per_patt*1/12e6)
+        dut.FrameController.unset_fsm_bypass()
+        # dut.FrameController.run_capture()
     
         # Read the FIFOs
         dut.read_master_fifo_data(packet)
@@ -224,13 +221,13 @@ try:
             # Unpack data into bits
             l = []
             for i in range(len(receive_array[chip])):
-                l.append(np.binary_repr(receive_array[chip][i], 12))
+                l.append(np.binary_repr(receive_array[chip][i], 20))
             data = ''.join(l)
             
             # Check 
             for frame in range(number_of_frames):
-                bits_in_frame = patt_per_frame * 1800
-                for j in range(180):
+                bits_in_frame = patt_per_frame * 3000
+                for j in range(300):
                     packet_data = data[frame*bits_in_frame+10*j:frame*bits_in_frame+10*(j+1)]
                     # print("Packet data is " + str(int(packet_data, base=2)) + " and should be " + str(DataIn))
                     if (int(packet_data, base = 2) != DataIn):
@@ -263,11 +260,6 @@ try:
             log_file.write('\n')
 
 finally:
-        # Disable power supplies
-        dut.disable_cath_sm_supply()
-        dut.disable_hvdd_ldo_supply()
-        dut.disable_vrst_ldo_supply()
-        dut.disable_vcsel_cath_sm_supply()
 
         print("Closing FPGA")
         dut.fpga_interface.xem.Close()
