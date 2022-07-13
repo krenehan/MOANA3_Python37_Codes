@@ -8,7 +8,7 @@ import numpy
 # Setup
 # =============================================================================
 # Set chip number
-number_of_chips = 2
+number_of_chips = 16
 
 # Set row and cell
 row         = ['chip_row_'+ str(i) for i in range(number_of_chips)]
@@ -145,7 +145,7 @@ try:
     packet = DataPacket.DataPacket(number_of_chips, number_of_frames, patt_per_frame, meas_per_patt, period, compute_mean=False)
         
     # Test pattern in, test pattern out loop
-    for DataIn in (0b1111000011,):#range(1, 1023, 8):
+    for DataIn in (0b0000000000,):#range(1, 1023, 8):
         
         expected_packet = (DataIn << 10) + DataIn
         
@@ -171,28 +171,28 @@ try:
             
         # Run capture
         dut.FrameController.set_fsm_bypass()
-        time.sleep(0.05)
+        time.sleep(0.02)
         dut.FrameController.unset_fsm_bypass()
         # dut.FrameController.run_capture()
         
         # Read from pipe
-        for chip in range(number_of_chips):
-            packet.rbuf = bytearray(600*1*number_of_frames*patt_per_frame)
-            dut.fpga_interface.xem.ReadFromPipeOut(0xA1, packet.rbuf)
+        # for chip in range(number_of_chips):
+        packet.rbuf = bytearray(600*1*number_of_frames*patt_per_frame)
+        dut.fpga_interface.xem.ReadFromPipeOut(0xA1, packet.rbuf)
+        
+        # Raw string
+        rs = dut.fpga_interface.decode_data_fifo_to_string(packet)
+        
+        # Isolate the packet from chip 0
+        s = rs[0:32*150*patt_per_frame*number_of_frames]
+        
+        # Work through the packet
+        print("------------------------- Chip " + str(1) + " -------------------------")
+        for p in range(len(s) // 32):
             
-            # Raw string
-            rs = dut.fpga_interface.decode_data_fifo_to_string(packet)
-            
-            # Isolate the packet from chip 0
-            s = rs[0:32*150*patt_per_frame*number_of_frames]
-            
-            # Work through the packet
-            print("------------------------- Chip " + str(chip) + " -------------------------")
-            for p in range(len(s) // 32):
-                
-                # Grab the part of the string
-                ps = s[p*32:(p+1)*32]
-                print('Packet {0:03d}'.format(p) + ': ' + ps[0:12] + " + " + ps[12:22] + " + " + ps[22:32])
+            # Grab the part of the string
+            ps = s[p*32:(p+1)*32]
+            print('Packet {0:03d}'.format(p) + ': ' + ps[0:12] + " + " + ps[12:22] + " + " + ps[22:32])
         
         # Numpy datatype definition
         dt = np.dtype(np.uint32)
@@ -202,12 +202,12 @@ try:
         packet_data = np.frombuffer(packet.rbuf, dtype=dt).astype(int)
         
         # Loop through array
-        print("Expected bin value: " + str(expected_packet))
-        for p in range(len(packet_data)):
-            if packet_data[p] == expected_packet:
-                print("Bin {0:03d}: ".format(p) + str(packet_data[p]) + "    " + "MATCH")
-            else:
-                print("Bin {0:03d}: ".format(p) + str(packet_data[p]) + "    " + "NO MATCH")
+        # print("Expected bin value: " + str(expected_packet))
+        # for p in range(len(packet_data)):
+        #     if packet_data[p] == expected_packet:
+        #         print("Bin {0:03d}: ".format(p) + str(packet_data[p]) + "    " + "MATCH")
+        #     else:
+        #         print("Bin {0:03d}: ".format(p) + str(packet_data[p]) + "    " + "NO MATCH")
             
         
 
