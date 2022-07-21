@@ -300,7 +300,7 @@ class FrameController:
     # ====================================================
     # Send configuration information to the frame controller
     # ====================================================
-    def send_frame_data(self, pattern_pipe, number_of_chips, number_of_frames, patterns_per_frame, measurements_per_pattern):
+    def send_frame_data(self, pattern_pipe, number_of_chips, number_of_frames, patterns_per_frame, measurements_per_pattern, pad_capture_mask):
         ''' Send configuration data to the frame controller'''
         
         # Retain number of chips
@@ -317,6 +317,9 @@ class FrameController:
         
         # Update the pattern pipe 
         self.__update_pattern_pipe(pattern_pipe)
+        
+        # Update the pad_captured mask
+        self.__update_pad_captured_mask(pad_captured_mask)
         
         # Get the FIFO size
         self.__get_fifo_size()
@@ -585,7 +588,10 @@ class FrameController:
     # Update the measurements per pattern in the FSM registers
     # ====================================================
     def __update_measurements_per_pattern(self, measurements_per_pattern):
-        self.__fpga_interface.wire_in(addr.ADDR_WIRE_IN_MEASUREMENT, measurements_per_pattern)
+        measurements_per_pattern_msb = (measurements_per_pattern & 0x00FF0000) >> 16
+        measurements_per_pattern_lsb = (measurements_per_pattern & 0x0000FFFF)
+        self.__fpga_interface.wire_in(addr.ADDR_WIRE_IN_MEASUREMENT_MSB, measurements_per_pattern_msb)
+        self.__fpga_interface.wire_in(addr.ADDR_WIRE_IN_MEASUREMENT_LSB, measurements_per_pattern_lsb)
         self.__measurements_per_pattern = measurements_per_pattern
     
 
@@ -610,6 +616,13 @@ class FrameController:
     # ====================================================
     def __get_fifo_size(self):
         self.__fifo_size = self.__fpga_interface.wire_out(addr.ADDR_WIRE_OUT_FIFO_SIZE)
+        
+        
+    # ====================================================
+    # Update the pad_captured mask
+    # ====================================================
+    def __update_pad_captured_mask(self, pad_captured_mask):
+        self.__fpga_interface.wire_in(addr.ADDR_WIRE_IN_PAD_CAPTURED_MASK, pad_captured_mask)
         
         
     # ====================================================
@@ -665,47 +678,6 @@ class FrameController:
         # For 2 patterns per frame, this should be 2 bytes, each byte containing the emitter number
         self.__fpga_interface.pipe_in_pattern( addr.ADDR_PIPE_IN_PATTERN, b_array)
         
-    # def __bug_fix_v1(self, b_array):
-        
-    #     # 2 LSB bytes
-    #     b0 = b_array[0]
-    #     b1 = b_array[1]
-        
-    #     last0 = self.__patterns_per_frame * 2 - 2
-    #     last1 = self.__patterns_per_frame * 2 - 1
-        
-    #     # Get the end bytes
-    #     blast0 = b_array[last0]
-    #     blast1 = b_array[last1]
-        
-    #     # Swap
-    #     new_b_array = b_array
-    #     new_b_array[0] = blast0
-    #     new_b_array[1] = blast1
-    #     new_b_array[last0] = b0
-    #     new_b_array[last1] = b1
-        
-    #     # Return
-    #     return new_b_array
-        
-    # def __bug_fix_v2(self, b_array):
-        
-    #     # Get bytes of interest
-    #     b_array_roi = b_array[0:self.__patterns_per_frame*2]
-        
-    #     # Shift operation - end bytes to front
-    #     b_array_new = b_array_roi[self.__patterns_per_frame*2-2: self.__patterns_per_frame*2]
-    #     b_array_new = b_array_new + b_array_roi[0:self.__patterns_per_frame*2-2]
-        
-    #     # Shift operation - front bytes to end
-    #     b_array_new = b_array_roi[0:2]
-    #     b_array_new = b_array_roi[2:self.__patterns_per_frame*2] + b_array_new
-        
-    #     # Extend
-    #     b_array_new = b_array_new + bytearray(len(b_array)-len(b_array_new))
-        
-    #     return b_array_new
-        
         
     # ====================================================
     # Update the words per transfer in the data stream
@@ -726,11 +698,16 @@ class FrameController:
             raise FrameControllerError("RefClk frequency must be less than or equal to 100 MHz for proper chip operation")
         if self.txperiod < 40:
             raise FrameControllerError("TxRefClk frequency must be less than or equal to 25 MHz for proper chip operation")
+            
+        # Check that measurements per pattern does not exceed 24 bits
+        if self.__measurements_per_pattern > 2**24-1:
+            raise FrameControllerError("Measurements per pattern cannot exceed " + str(2**24-1))
+            
         
         # Check that data streamout has adequate time to complete
         min_meas_per_patt = int(self.txperiod / self.period * self.__number_of_words_per_histogram * 16)
         if min_meas_per_patt >= self.__measurements_per_pattern:
-            if min_meas_per_patt < 2**15-1:
+            if min_meas_per_patt < 2**24-1:
                 raise FrameControllerError("Insufficient time for data streamout in current configuration" + "\n" + "Increase measurements per pattern to at least " + str(min_meas_per_patt))
             else:
                 raise FrameControllerError("Insufficient time for data streamout in current configuration" + "\n" + "Increase TxRefClk frequency or decrease RefClk frequency")
@@ -742,7 +719,7 @@ class FrameController:
         # Check that the FIFO won't overflow at this data rate
         if self.__number_of_words_per_histogram * self.__number_of_frames * self.__patterns_per_frame * 2 > self.__fifo_size:
             a = self.__fifo_size // self.__number_of_words_per_histogram
-            # raise FrameControllerError("Number of patterns and frames is too large" + "\n" + "Number of frames * patterns per frame needs to be less than " + str(a))
+            raise FrameControllerError("Number of patterns and frames is too large" + "\n" + "Number of frames * patterns per frame needs to be less than " + str(a))
             
         # Ensure that number of words per transfer is not too large
         if (self.__number_of_words_per_transfer > 2**16-1):
