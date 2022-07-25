@@ -68,7 +68,8 @@ try:
     patt_per_frame                  = 1
     number_of_frames                = 1
     period                          = round(1/refclk_freq*1e9, 1)
-    
+    pad_captured_mask               = 0b1111111111111111
+
     
     # =============================================================================
     # Power Setup - Initialize power supplies
@@ -167,7 +168,8 @@ try:
                                             number_of_chips, \
                                             number_of_frames,   \
                                             patt_per_frame,     \
-                                            meas_per_patt       )
+                                            meas_per_patt, 
+                                            pad_captured_mask )
             
         # Run capture
         dut.FrameController.set_fsm_bypass()

@@ -8,7 +8,7 @@ from copy import deepcopy
 # =============================================================================
 
 # Number of captures per time gating setting
-captures = 10000
+captures = 1
 
 # Number of chips
 number_of_chips = 16
@@ -34,10 +34,11 @@ time_recorded = False
 # Test settings
 # Integration time = meas_per_patt * 1/clk_freq * patt_per_frame * number_of_frames
 # =============================================================================
-meas_per_patt                       = 32000
+meas_per_patt                       = 50000
 patt_per_frame                      = 1
 number_of_frames                    = 1
 tx_refclk_freq                      = 12.5e6
+pad_captured_mask                   = 0b1
 clk_flip                            = True
 spad_voltage                        = 27.7
 vrst_voltage                        = 3.3
@@ -83,7 +84,7 @@ vcsel_enable_through_scan = False
 # Plotting options
 # =============================================================================
 # Fast mode overrides all othe plot settings and optimizes processing for fast collection of data
-fast_mode = False
+fast_mode = False 
 
 # Raw plotting shows bins instead of time on the x-axis
 raw_plotting = True
@@ -210,6 +211,7 @@ for time_gate_value in time_gate_list:
     
     # Program the FPGA
     dut.init_fpga(bitfile_path = paths.bitfile_path)
+    dut.fpga_interface.xem.ResetFPGA()
     # Print the serial number of the device
     serial_number = dut.fpga_interface.xem.GetSerialNumber()
     print("Serial Number: " + serial_number)
@@ -263,6 +265,7 @@ for time_gate_value in time_gate_list:
         # Scan chain configuration
         # =============================================================================
         print("Configuring scan chains...")
+     
         
         # Create scan bits
         row         = ['chip_row_'+ str(i) for i in range(number_of_chips)]
@@ -292,8 +295,8 @@ for time_gate_value in time_gate_list:
             scan_bits[i].ClkBypass             = '0'
             
             # Configure pattern reset signal
-            scan_bits[i].PattResetControlledByTriggerExt       = '1' 
-            scan_bits[i].PattResetExtEnable    = '1'
+            scan_bits[i].PattResetControlledByTriggerExt       = '0' 
+            scan_bits[i].PattResetExtEnable    = '0'
             
             # Configure VCSELs
             scan_bits[i].VCSELEnableWithScan        = '1' 
@@ -302,8 +305,8 @@ for time_gate_value in time_gate_list:
             scan_bits[i].VCSELWave2Enable         = '1'
             
             # Configure TxData
-            scan_bits[i].TestPattEnable        = '0'
-            scan_bits[i].TestDataIn            = np.binary_repr(0, 10)
+            scan_bits[i].TestPattEnable        = '1'
+            scan_bits[i].TestDataIn            = np.binary_repr(2, 10)
             scan_bits[i].TxDataExtRequestEnable = '0'
             
             # Configure subtractor
@@ -349,6 +352,7 @@ for time_gate_value in time_gate_list:
                 print( "TDC Fine Raw : %s" % scan_bits_received[i].TDCFineOutRaw)
                 print( "TDC Coarse Raw : %d" % int(scan_bits_received[i].TDCCoarseOut, base=2))
         
+        print("Done configuring")
 
         # =============================================================================
         # Send information to frame controller prior to capture
@@ -358,13 +362,15 @@ for time_gate_value in time_gate_list:
                                             number_of_chips, \
                                             number_of_frames,   \
                                             patt_per_frame,     \
-                                            meas_per_patt       )
+                                            meas_per_patt,
+                                            pad_captured_mask )
 
         
         # =============================================================================
         # Final chip reset before capture starts
         # =============================================================================
         dut.pulse_signal('cell_reset')
+        dut.reset_fifos()
         time.sleep(config_wait)
 
 
@@ -381,9 +387,16 @@ for time_gate_value in time_gate_list:
                 timestamp = time.time() - time_init                
             
             # Run capture
+            dut.check_fifo_data_counts()
             dut.FrameController.run_capture()
             
-            # dut.check_fifo_data_counts()
+            
+            # Run capture
+            # dut.FrameController.set_fsm_bypass()
+            # time.sleep(4*meas_per_patt*1/12e6)
+            # dut.FrameController.unset_fsm_bypass()
+            
+            dut.check_fifo_data_counts()
 
             
             # Read the data
@@ -423,7 +436,7 @@ for time_gate_value in time_gate_list:
 
             
         # Print frame rate
-        print("Frame Rate is " + str(int(i/timestamp)) + " Hz")
+        # print("Frame Rate is " + str(int(i/timestamp)) + " Hz")
     
     # =============================================================================
     # Disable supplies, close plots, log files, and FPGA on exit

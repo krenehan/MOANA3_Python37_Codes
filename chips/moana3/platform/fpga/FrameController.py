@@ -36,6 +36,8 @@ class FrameController:
     __patterns_per_frame = 0
     __measurements_per_pattern = 0
     __number_of_bits = 0
+    __pad_captured_mask = 0b0000000000000000
+
     
     # Capture wait time (s)
     __capture_wait_time = 0.0
@@ -62,8 +64,8 @@ class FrameController:
     __SIGNAL_CAPTURE_DONE =           0x0100
     
     # Clock period (ns)
-    period = 50.0
-    txperiod = 50.0
+    period = 20.0
+    txperiod = 40.0
     
     # Largest number of patterns
     __number_of_unique_patterns =     5
@@ -269,20 +271,26 @@ class FrameController:
                 # End scan process
                 self.__set_scan_done()
                 
+                print("After scan done -> " + self.check_state())
+                
                 # Send frame data
                 self.__run_send_frame_data()
+                print("After send frame data -> " + self.check_state())
             
                 # Start the capture
                 self.__set_capture_start()
+                print("After capture start -> " + self.check_state())
                 
                 # Wait a little
                 time.sleep(self.__capture_wait_time)
+                print("After waiting -> " + self.check_state())
                 
                 # Check that the capture process is done
                 self.__run_capture_done()
                 
                 # Ensure that the frame controller is in idle state
                 self.__run_capture_idle()
+                print("End of capture -> " + self.check_state())
                 
                 # Add to successful captures
                 __successful_captures = __successful_captures + 1
@@ -300,7 +308,7 @@ class FrameController:
     # ====================================================
     # Send configuration information to the frame controller
     # ====================================================
-    def send_frame_data(self, pattern_pipe, number_of_chips, number_of_frames, patterns_per_frame, measurements_per_pattern, pad_capture_mask):
+    def send_frame_data(self, pattern_pipe, number_of_chips, number_of_frames, patterns_per_frame, measurements_per_pattern, pad_captured_mask):
         ''' Send configuration data to the frame controller'''
         
         # Retain number of chips
@@ -428,16 +436,18 @@ class FrameController:
                 self.__unset_capture_start()
                 self.__unset_frame_data_sent()
                 self.__unset_scan_done()
+                print("Check capture done true-> " + self.check_state())
                 return 0
             
             # If the capture is still running, wait for it to finish
             elif self.check_capture_running():
                 time.sleep(0.001)
+                print("Check capture done false-> " + self.check_state())
                 
             # If the capture isn't running, end the process
             else:
                 time.sleep(0.001)
-                #raise FrameControllerError("Capture did not start")
+                raise FrameControllerError("Capture did not start")
         
         # If we try 2000 times and still haven't gotten a capture, we quit
         raise FrameControllerError("Capture did not finish")
@@ -624,6 +634,7 @@ class FrameController:
     def __update_pad_captured_mask(self, pad_captured_mask):
         self.__fpga_interface.wire_in(addr.ADDR_WIRE_IN_PAD_CAPTURED_MASK, pad_captured_mask)
         
+
         
     # ====================================================
     # Update the pattern pipe
@@ -719,10 +730,30 @@ class FrameController:
         # Check that the FIFO won't overflow at this data rate
         if self.__number_of_words_per_histogram * self.__number_of_frames * self.__patterns_per_frame * 2 > self.__fifo_size:
             a = self.__fifo_size // self.__number_of_words_per_histogram
-            raise FrameControllerError("Number of patterns and frames is too large" + "\n" + "Number of frames * patterns per frame needs to be less than " + str(a))
+            # raise FrameControllerError("Number of patterns and frames is too large" + "\n" + "Number of frames * patterns per frame needs to be less than " + str(a))
             
         # Ensure that number of words per transfer is not too large
         if (self.__number_of_words_per_transfer > 2**16-1):
             raise FrameControllerError("Number of words per transfer is greater than 2^16-1")
 
+
+    # ====================================================
+    # Check state of frame controller
+    # ====================================================
+    def check_state(self):
+        
+        s = self.__fpga_interface.wire_out(addr.ADDR_WIRE_OUT_FC_STATE)
+        if s == 0x01:
+            return "Frame controller state is IDLE"
+        if s == 0x02:
+            return "Frame controller state is HANDSHAKE"
+        if s == 0x04:
+            return "Frame controller state is RUN"
+        if s == 0x08:
+            return "Frame controller state is DONE"
+        if s == 0x10:
+            return "Frame controller state is RESET"
+        if s == 0x20:
+            return "Frame controller state is STREAM_RESUME"
+            
         

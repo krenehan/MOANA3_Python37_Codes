@@ -94,6 +94,7 @@ try:
     patt_per_frame                  = 1
     number_of_frames                = 1
     period                              = round(1/refclk_freq*1e9, 1)
+    pad_captured_mask               = 0b1111111111111111
 
     
     
@@ -198,13 +199,14 @@ try:
                                             number_of_chips, \
                                             number_of_frames,   \
                                             patt_per_frame,     \
-                                            meas_per_patt       )
+                                            meas_per_patt,
+                                            pad_captured_mask)
         
         # Run capture
-        dut.FrameController.set_fsm_bypass()
-        time.sleep(4*meas_per_patt*1/12e6)
-        dut.FrameController.unset_fsm_bypass()
-        # dut.FrameController.run_capture()
+        # dut.FrameController.set_fsm_bypass()
+        # time.sleep(4*meas_per_patt*1/12e6)
+        # dut.FrameController.unset_fsm_bypass()
+        dut.FrameController.run_capture()
     
         # Read the FIFOs
         dut.read_master_fifo_data(packet)
@@ -228,7 +230,7 @@ try:
                 for j in range(300):
                     packet_data = data[frame*bits_in_frame+10*j:frame*bits_in_frame+10*(j+1)]
                     # print("Packet data is " + str(int(packet_data, base=2)) + " and should be " + str(DataIn))
-                    print("Packet data is " + packet_data + " and should be " + str(np.binary_repr(DataIn, 10)))
+                    # print("Packet data is " + packet_data + " and should be " + str(np.binary_repr(DataIn, 10)))
                     if (int(packet_data, base = 2) != DataIn):
                         test_passed[chip] = False
                         break
