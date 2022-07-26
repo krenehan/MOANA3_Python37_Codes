@@ -8,7 +8,7 @@ from copy import deepcopy
 # =============================================================================
 
 # Number of captures per time gating setting
-captures = 1
+captures = 10
 
 # Number of chips
 number_of_chips = 16
@@ -306,7 +306,7 @@ for time_gate_value in time_gate_list:
             
             # Configure TxData
             scan_bits[i].TestPattEnable        = '1'
-            scan_bits[i].TestDataIn            = np.binary_repr(2, 10)
+            scan_bits[i].TestDataIn            = np.binary_repr(30, 10)
             scan_bits[i].TxDataExtRequestEnable = '0'
             
             # Configure subtractor
