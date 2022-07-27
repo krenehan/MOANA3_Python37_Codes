@@ -8,7 +8,7 @@ from copy import deepcopy
 # =============================================================================
 
 # Number of captures per time gating setting
-captures = 1000
+captures = 5
 
 # Number of chips
 number_of_chips = 16
@@ -34,11 +34,11 @@ time_recorded = False
 # Test settings
 # Integration time = meas_per_patt * 1/clk_freq * patt_per_frame * number_of_frames
 # =============================================================================
-meas_per_patt                       = 500000
-patt_per_frame                      = 4
+meas_per_patt                       = 50000
+patt_per_frame                      = 1
 number_of_frames                    = 1
 tx_refclk_freq                      = 12.5e6
-pad_captured_mask                   = 0b1111111111111111
+pad_captured_mask                   = 0b1
 clk_flip                            = True
 spad_voltage                        = 24.7
 vrst_voltage                        = 3.3
@@ -217,11 +217,9 @@ for time_gate_value in time_gate_list:
     print("Serial Number: " + serial_number)
 
     # Setup the delay line
-    # dut.DelayLine.set_clk_flip(clk_flip)
-    # bypass, coarse, fine = dut.DelayLine.set_delay_line(gating_delay)
-    # time_gating_delay = dut.DelayLine.get_delay(coarse, fine)
-    bypass, coarse, fine = 0, 0, 0
-    time_gating_delay=0
+    dut.DelayLine.set_clk_flip(clk_flip)
+    bypass, coarse, fine = dut.DelayLine.set_delay_line(gating_delay)
+    time_gating_delay = dut.DelayLine.get_delay(coarse, fine)
     
     if plotting:
         
@@ -256,7 +254,6 @@ for time_gate_value in time_gate_list:
         print("Powering on...")
         # dut.enable_vdd_sm_supply()
         # dut.enable_hvdd_ldo_supply()
-        dut.enable_cath_sm_supply()
         time.sleep(ldo_wait)
         
         # Issue scan reset
@@ -278,34 +275,28 @@ for time_gate_value in time_gate_list:
         for i in range(number_of_chips):
             
             # Configure TDC
-            if True :
-                scan_bits[i].TDCStartSelect        = '0'*8 if external_start else '1'*8
-                scan_bits[i].TDCStopSelect         = '0'*8 if external_stop else '1'*8
-                scan_bits[i].TDCDisable            = '0'*8
-                scan_bits[i].TDCDCBoost            = '0'*8 
-            else:
-                scan_bits[i].TDCStartSelect        = '0'*8
-                scan_bits[i].TDCStopSelect         = '0'*8
-                scan_bits[i].TDCDisable            = '1'*8
-                scan_bits[i].TDCDCBoost            = '1'*8 
+            scan_bits[i].TDCStartSelect        = '01111111' 
+            scan_bits[i].TDCStopSelect         = '0'*8 
+            scan_bits[i].TDCDisable            = '01111111'
+            scan_bits[i].TDCDCBoost            = '01111111' 
             
             
             # Configure Pattern Counter
             scan_bits[i].MeasPerPatt           = np.binary_repr(meas_per_patt, 24)
-            if True :
+            if i == 0:
                 scan_bits[i].MeasCountEnable       = '1'
             else:
                 scan_bits[i].MeasCountEnable       = '0'
             
             
             # Configuring Delay Lines
-            dword = 0
+            dword = 3
             scan_bits[i].AQCDLLCoarseWord      = np.binary_repr( (dword&0b11110000) >> 4, 4)
             scan_bits[i].AQCDLLFineWord        = np.binary_repr((dword&0b1110) >> 1, 3)
             scan_bits[i].AQCDLLFinestWord      = np.binary_repr((dword&0b1), 1)
-            scan_bits[i].DriverDLLWord         = np.binary_repr(1, 5)
-            scan_bits[i].ClkFlip               = '1'
-            scan_bits[i].ClkBypass             = '1'
+            scan_bits[i].DriverDLLWord         = np.binary_repr(5, 5)
+            scan_bits[i].ClkFlip               = '0'
+            scan_bits[i].ClkBypass             = '0'
             
             # Configure pattern reset signal
             scan_bits[i].PattResetControlledByTriggerExt       = '0' 
@@ -318,18 +309,18 @@ for time_gate_value in time_gate_list:
             scan_bits[i].VCSELWave2Enable         = '1'
             
             # Configure TxData
-            scan_bits[i].TestPattEnable        = '0'
-            scan_bits[i].TestDataIn            = np.binary_repr(4, 10)
+            scan_bits[i].TestPattEnable        = '1'
+            scan_bits[i].TestDataIn            = np.binary_repr(40, 10)
             scan_bits[i].TxDataExtRequestEnable = '0'
             
             # Configure subtractor
-            scan_bits[i].TimeOffsetWord        = np.binary_repr(143, 10)
+            scan_bits[i].TimeOffsetWord        = np.binary_repr(354, 10)
             scan_bits[i].SubtractorBypass      = '0'
             
             scan_bits[i].DynamicConfigEnable = '0'
             
             # Configure SPADs
-            scan_bits[i].SPADEnable            = '1'*64
+            scan_bits[i].SPADEnable            = '0'*64
         
         
         # Make scan bits for the fpga
@@ -415,15 +406,14 @@ for time_gate_value in time_gate_list:
             # Read the data
             # s = dut.fpga_interface.pipe_out_master_fifo_to_string(packet) 
             dut.read_master_fifo_data(packet)
-            
             print("Packet 0")
             # print(s[0:4800])
             print(packet.data[0])
             # s = dut.fpga_interface.pipe_out_master_fifo_to_string(packet)
-            # dut.read_master_fifo_data(packet)
-            # print("Packet 1")
-            # # print(s[0:4800])
-            # print(packet.data[0])
+            dut.read_master_fifo_data(packet)
+            print("Packet 1")
+            # print(s[0:4800])
+            print(packet.data[0])
 
  
             # Update the plot
@@ -466,7 +456,7 @@ for time_gate_value in time_gate_list:
     # =============================================================================
     finally:
         # dut.disable_hvdd_ldo_supply()
-        dut.disable_cath_sm_supply()
+        
         print("Closing FPGA")
         dut.fpga_interface.xem.Close()
         if data_plotter_created:

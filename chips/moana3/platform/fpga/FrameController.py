@@ -284,6 +284,10 @@ class FrameController:
                 # Wait a little
                 time.sleep(self.__capture_wait_time)
                 print("After waiting -> " + self.check_state())
+                time.sleep(10e-3)
+                print("After waiting -> " + self.check_state())
+                time.sleep(10e-3)
+                print("After waiting -> " + self.check_state())
                 
                 # Check that the capture process is done
                 self.__run_capture_done()
@@ -745,15 +749,17 @@ class FrameController:
         s = self.__fpga_interface.wire_out(addr.ADDR_WIRE_OUT_FC_STATE)
         if s == 0x01:
             return "Frame controller state is IDLE"
-        if s == 0x02:
+        elif s == 0x02:
             return "Frame controller state is HANDSHAKE"
-        if s == 0x04:
-            return "Frame controller state is RUN"
-        if s == 0x08:
-            return "Frame controller state is DONE"
-        if s == 0x10:
+        elif s == 0x04:
+            return "Frame controller state is RUN_CAPTURE"
+        elif s == 0x08:
+            return "Frame controller state is FINISH_DATATX"
+        elif s == 0x10:
+            return "Frame controller state is FINISH_CAPTURE"
+        elif s == 0x20:
             return "Frame controller state is RESET"
-        if s == 0x20:
+        elif s == 0x40:
             return "Frame controller state is STREAM_RESUME"
             
         

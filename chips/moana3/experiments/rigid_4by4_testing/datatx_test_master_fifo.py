@@ -179,7 +179,7 @@ try:
     packet = DataPacket.DataPacket(number_of_chips, number_of_frames, patt_per_frame, meas_per_patt, period, compute_mean=False)
         
     # Test pattern in, test pattern out loop
-    for DataIn in (0b1111110011,):#range(1, 1023, 8):
+    for DataIn in (0b1,0b1,0b1,0b1,0b1):#range(1, 1023, 8):
         
         # Console header
         print("------------ Test Pattern Data: " + np.binary_repr(DataIn, 10) + " ------------")
