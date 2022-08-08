@@ -63,12 +63,20 @@ class FrameController:
     __SIGNAL_CAPTURE_RUNNING =        0x0080
     __SIGNAL_CAPTURE_DONE =           0x0100
     
+    # Frame controller states
+    __STATE_IDLE =                    0x01
+    __STATE_HANDSHAKE =               0x02
+    __STATE_RUN_CAPTURE =             0x04
+    __STATE_FINISH_DATATX =           0x08
+    __STATE_FINISH_CAPTURE =          0x10
+    __STATE_RESET =                   0x20
+    __STATE_STREAM_RESUME =           0x40
+    
     # Clock period (ns)
     period = 20.0
     txperiod = 40.0
     
-    # Largest number of patterns
-    __number_of_unique_patterns =     5
+    # Number of chips
     __number_of_chips =               0
     
     # Pattern pipe
@@ -81,7 +89,6 @@ class FrameController:
     
     # To verify that stream configuration data was sent
     __data_stream_config_sent =              False
-    stream_rbuf =                           None
     
     # Size of backend FIFO
     __fifo_size = 0
@@ -364,12 +371,6 @@ class FrameController:
         
         # Indicate that data stream config was sent
         self.__data_stream_config_sent = True
-        
-        # Create the stream buffer
-        self.stream_rbuf = bytearray(228*self.__number_of_frames*self.__patterns_per_frame*self.__number_of_chips)
-        
-        # Return the read buffer for the stream 
-        return self.stream_rbuf
         
     
     # # ====================================================
@@ -732,9 +733,9 @@ class FrameController:
             raise FrameControllerError("Number of patterns must be less than 16")
             
         # Check that the FIFO won't overflow at this data rate
-        if self.__number_of_words_per_histogram * self.__number_of_frames * self.__patterns_per_frame * 2 > self.__fifo_size:
+        if self.__number_of_words_per_histogram * self.__number_of_frames * self.__patterns_per_frame > self.__fifo_size:
             a = self.__fifo_size // self.__number_of_words_per_histogram
-            # raise FrameControllerError("Number of patterns and frames is too large" + "\n" + "Number of frames * patterns per frame needs to be less than " + str(a))
+            raise FrameControllerError("Number of patterns and frames is too large" + "\n" + "Number of frames * patterns per frame needs to be less than " + str(a))
             
         # Ensure that number of words per transfer is not too large
         if (self.__number_of_words_per_transfer > 2**16-1):
@@ -747,19 +748,19 @@ class FrameController:
     def check_state(self):
         
         s = self.__fpga_interface.wire_out(addr.ADDR_WIRE_OUT_FC_STATE)
-        if s == 0x01:
+        if s == self.__STATE_IDLE:
             return "Frame controller state is IDLE"
-        elif s == 0x02:
+        elif s == self.__STATE_HANDSHAKE:
             return "Frame controller state is HANDSHAKE"
-        elif s == 0x04:
+        elif s == self.__STATE_RUN_CAPTURE:
             return "Frame controller state is RUN_CAPTURE"
-        elif s == 0x08:
+        elif s == self.__STATE_FINISH_DATATX:
             return "Frame controller state is FINISH_DATATX"
-        elif s == 0x10:
+        elif s == self.__STATE_FINISH_CAPTURE:
             return "Frame controller state is FINISH_CAPTURE"
-        elif s == 0x20:
+        elif s == self.__STATE_RESET:
             return "Frame controller state is RESET"
-        elif s == 0x40:
+        elif s == self.__STATE_STREAM_RESUME:
             return "Frame controller state is STREAM_RESUME"
             
         
