@@ -89,3 +89,43 @@ print("Minimum Delay Step (ps): " + str(np.amin(arr_delayed)))
 print("Maximum Delay Step (ps): " + str(np.amax(arr_delayed)))
 print("Full Range (ns): " + str(np.sum(arr_delayed)/1000))    
 
+# Sum the array
+arr_summed = np.empty_like(arr_delayed)
+for i in range(len(arr_delayed)):
+    arr_summed[i] = np.sum(arr_delayed[0:i])
+arr_summed = arr_summed / 1000
+    
+# Print to text file
+s = ''
+
+val = round(arr_summed[1], 3)
+prev_val = round(arr_summed[0], 3)
+s = s + \
+'''if (adjusted_delay_ns < {}):
+    word = {}
+    actual_delay_ns = {} + self.__base_delay_ns
+    
+'''.format(val, 0, prev_val)
+
+for entry in range(1, len(arr_summed)-1):
+    val = round(arr_summed[entry+1], 3)
+    prev_val = round(arr_summed[entry], 3)
+    s = s + \
+    '''elif (adjusted_delay_ns < {}):
+    word = {}
+    actual_delay_ns = {} + self.__base_delay_ns
+    
+'''.format(val, entry, prev_val)
+
+prev_val = round(arr_summed[254], 3)
+s = s + \
+'''else:
+    word = {}
+    actual_delay_ns = {} + self.__base_delay_ns
+    raise DelayLineException("Delay value is too large")
+    
+'''.format(254, prev_val)
+    
+f = open('delay_charac_clkflip.txt', 'w')
+f.write(s)
+f.close()
