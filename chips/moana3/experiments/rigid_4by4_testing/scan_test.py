@@ -104,6 +104,7 @@ try:
     # Power Setup - Initialize power supplies
     # =============================================================================
     dut.enable_hvdd_ldo_supply()
+    dut.enable_cath_sm_supply()
     time.sleep(ldo_wait)
     
     

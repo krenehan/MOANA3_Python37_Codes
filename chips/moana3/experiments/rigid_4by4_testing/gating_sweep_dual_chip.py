@@ -35,12 +35,12 @@ time_recorded = False
 # Integration time = meas_per_patt * 1/clk_freq * patt_per_frame * number_of_frames
 # =============================================================================
 meas_per_patt                       = 500000
-patt_per_frame                      = 4
+patt_per_frame                      = 1
 number_of_frames                    = 1
 tx_refclk_freq                      = 12.5e6
 pad_captured_mask                   = 0b1111111111111111
 clk_flip                            = True
-spad_voltage                        = 24.7
+spad_voltage                        = 25
 vrst_voltage                        = 3.3
 
 # Report integration time
@@ -84,7 +84,7 @@ vcsel_enable_through_scan = False
 # Plotting options
 # =============================================================================
 # Fast mode overrides all othe plot settings and optimizes processing for fast collection of data
-fast_mode = False 
+fast_mode = False  
 
 # Raw plotting shows bins instead of time on the x-axis
 raw_plotting = True
@@ -93,7 +93,7 @@ raw_plotting = True
 show_peak = False
 
 # Enabling this plots count data in log scale
-log_plots = False
+log_plots = True
 
 # Enabling this shows information about chip settings associated with the plotted data
 show_plot_info = False
@@ -223,12 +223,12 @@ for time_gate_value in time_gate_list:
     bypass, coarse, fine = 0, 0, 0
     time_gating_delay=0
     
-    if plotting:
+    # if plotting:
         
         # Propagate settings to MultipleDataPlotter
-        data_plotter.set_coarse_fine([coarse]*number_of_chips, [fine]*number_of_chips)
-        data_plotter.set_gate_delay([time_gating_delay]*number_of_chips)
-    
+        # data_plotter.set_coarse_fine([coarse]*number_of_chips, [fine]*number_of_chips)
+        # data_plotter.set_gate_delay([time_gating_delay]*number_of_chips)
+    # 
     
     # =============================================================================
     # Begin scan and capture
@@ -255,7 +255,7 @@ for time_gate_value in time_gate_list:
         # =============================================================================
         print("Powering on...")
         # dut.enable_vdd_sm_supply()
-        # dut.enable_hvdd_ldo_supply()
+        dut.enable_hvdd_ldo_supply()
         dut.enable_cath_sm_supply()
         time.sleep(ldo_wait)
         
@@ -299,23 +299,31 @@ for time_gate_value in time_gate_list:
             
             
             # Configuring Delay Lines
-            dword = 0
+            dword = 140
+
             scan_bits[i].AQCDLLCoarseWord      = np.binary_repr( (dword&0b11110000) >> 4, 4)
             scan_bits[i].AQCDLLFineWord        = np.binary_repr((dword&0b1110) >> 1, 3)
             scan_bits[i].AQCDLLFinestWord      = np.binary_repr((dword&0b1), 1)
-            scan_bits[i].DriverDLLWord         = np.binary_repr(1, 5)
+            scan_bits[i].DriverDLLWord         = np.binary_repr(0, 5)
             scan_bits[i].ClkFlip               = '1'
-            scan_bits[i].ClkBypass             = '1'
+            scan_bits[i].ClkBypass             = '0'
             
             # Configure pattern reset signal
             scan_bits[i].PattResetControlledByTriggerExt       = '0' 
             scan_bits[i].PattResetExtEnable    = '0'
             
+            # Configure individual VCSEL
+            # if (i == 0) or (i == 1) or (i == 2):
+            # if i == 15:
+            #     scan_bits[i].VCSELWave1Enable         = '1'    
+            # else:   
+            #     scan_bits[i].VCSELWave1Enable         = '0'   
+                
             # Configure VCSELs
-            scan_bits[i].VCSELEnableWithScan        = '1' 
+            scan_bits[i].VCSELWave1Enable         = '1'    
+            scan_bits[i].VCSELEnableWithScan        = '1'     
             scan_bits[i].VCSELEnableControlledByScan        = '1' 
-            scan_bits[i].VCSELWave1Enable         = '1'
-            scan_bits[i].VCSELWave2Enable         = '1'
+            scan_bits[i].VCSELWave2Enable         = '0'
             
             # Configure TxData
             scan_bits[i].TestPattEnable        = '0'
@@ -324,6 +332,23 @@ for time_gate_value in time_gate_list:
             
             # Configure subtractor
             scan_bits[i].TimeOffsetWord        = np.binary_repr(143, 10)
+            scan_bits[0].TimeOffsetWord         = np.binary_repr(153, 10)
+            scan_bits[1].TimeOffsetWord         = np.binary_repr(151, 10)
+            scan_bits[2].TimeOffsetWord         = np.binary_repr(154, 10)
+            scan_bits[3].TimeOffsetWord         = np.binary_repr(150, 10)
+            scan_bits[4].TimeOffsetWord         = np.binary_repr(153, 10)
+            scan_bits[5].TimeOffsetWord         = np.binary_repr(153, 10)
+            scan_bits[6].TimeOffsetWord         = np.binary_repr(154, 10)
+            scan_bits[7].TimeOffsetWord         = np.binary_repr(155, 10)
+            scan_bits[8].TimeOffsetWord         = np.binary_repr(151, 10)
+            scan_bits[9].TimeOffsetWord         = np.binary_repr(155, 10)
+            scan_bits[10].TimeOffsetWord         = np.binary_repr(153, 10)
+            scan_bits[11].TimeOffsetWord         = np.binary_repr(153, 10)
+            scan_bits[12].TimeOffsetWord         = np.binary_repr(153, 10)
+            scan_bits[13].TimeOffsetWord         = np.binary_repr(154, 10)
+            scan_bits[14].TimeOffsetWord         = np.binary_repr(154, 10)
+            scan_bits[15].TimeOffsetWord         = np.binary_repr(151, 10)           
+
             scan_bits[i].SubtractorBypass      = '0'
             
             scan_bits[i].DynamicConfigEnable = '0'
@@ -390,7 +415,7 @@ for time_gate_value in time_gate_list:
         # =============================================================================
         # Image capture loop
         # =============================================================================
-        for i in range(captures):
+        while True:#for i in range(captures):
             
             if not time_recorded:
                 time_init = time.time()
@@ -400,7 +425,7 @@ for time_gate_value in time_gate_list:
                 timestamp = time.time() - time_init                
             
             # Run capture
-            dut.check_fifo_data_counts()
+            # dut.check_fifo_data_counts()
             dut.FrameController.run_capture()
             
             
@@ -409,16 +434,16 @@ for time_gate_value in time_gate_list:
             # time.sleep(meas_per_patt*1/50e6)
             # dut.FrameController.unset_fsm_bypass()
             
-            dut.check_fifo_data_counts()
+            # dut.check_fifo_data_counts()
 
             
             # Read the data
             # s = dut.fpga_interface.pipe_out_master_fifo_to_string(packet) 
             dut.read_master_fifo_data(packet)
             
-            print("Packet 0")
+            # print("Packet 0")
             # print(s[0:4800])
-            print(packet.data[0])
+            # print(packet.data[0])
             # s = dut.fpga_interface.pipe_out_master_fifo_to_string(packet)
             # dut.read_master_fifo_data(packet)
             # print("Packet 1")

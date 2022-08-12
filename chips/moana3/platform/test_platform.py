@@ -85,7 +85,7 @@ class TestPlatform:
         self.FrameController.txperiod = round(1/tx_refclk_freq*1e9, 1)
         
         # Pass clock frequency to DelayLine
-        self.DelayLine.set_clk_period(round(1/refclk_freq*1e9, 1))
+        # self.DelayLine.set_clk_period(round(1/refclk_freq*1e9, 1))
 
         # Load bit file to FPGA
         if bitfile_path == '':

@@ -217,15 +217,15 @@ for time_gate_value in time_gate_list:
     print("Serial Number: " + serial_number)
 
     # Setup the delay line
-    dut.DelayLine.set_clk_flip(clk_flip)
-    bypass, coarse, fine = dut.DelayLine.set_delay_line(gating_delay)
-    time_gating_delay = dut.DelayLine.get_delay(coarse, fine)
+    # dut.DelayLine.set_clk_flip(clk_flip)
+    # bypass, coarse, fine = dut.DelayLine.set_delay_line(gating_delay)
+    # time_gating_delay = dut.DelayLine.get_delay(coarse, fine)
     
-    if plotting:
+    # if plotting:
         
         # Propagate settings to MultipleDataPlotter
-        data_plotter.set_coarse_fine([coarse]*number_of_chips, [fine]*number_of_chips)
-        data_plotter.set_gate_delay([time_gating_delay]*number_of_chips)
+        # data_plotter.set_coarse_fine([coarse]*number_of_chips, [fine]*number_of_chips)
+        # data_plotter.set_gate_delay([time_gating_delay]*number_of_chips)
     
     
     # =============================================================================
@@ -305,8 +305,8 @@ for time_gate_value in time_gate_list:
             # Configure VCSELs
             scan_bits[i].VCSELEnableWithScan        = '1' 
             scan_bits[i].VCSELEnableControlledByScan        = '1' 
-            scan_bits[i].VCSELWave1Enable         = '1'
-            scan_bits[i].VCSELWave2Enable         = '1'
+            scan_bits[i].VCSELWave1Enable         = '0'
+            scan_bits[i].VCSELWave2Enable         = '0'
             
             # Configure TxData
             scan_bits[i].TestPattEnable        = '1'

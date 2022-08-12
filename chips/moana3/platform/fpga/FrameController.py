@@ -278,30 +278,30 @@ class FrameController:
                 # End scan process
                 self.__set_scan_done()
                 
-                print("After scan done -> " + self.check_state())
+                # print("After scan done -> " + self.check_state())
                 
                 # Send frame data
                 self.__run_send_frame_data()
-                print("After send frame data -> " + self.check_state())
+                # print("After send frame data -> " + self.check_state())
             
                 # Start the capture
                 self.__set_capture_start()
-                print("After capture start -> " + self.check_state())
+                # print("After capture start -> " + self.check_state())
                 
                 # Wait a little
                 time.sleep(self.__capture_wait_time)
-                print("After waiting -> " + self.check_state())
-                time.sleep(10e-3)
-                print("After waiting -> " + self.check_state())
-                time.sleep(10e-3)
-                print("After waiting -> " + self.check_state())
+                # print("After waiting -> " + self.check_state())
+                # time.sleep(10e-3)
+                # print("After waiting -> " + self.check_state())
+                # time.sleep(10e-3)
+                # print("After waiting -> " + self.check_state())
                 
                 # Check that the capture process is done
                 self.__run_capture_done()
                 
                 # Ensure that the frame controller is in idle state
                 self.__run_capture_idle()
-                print("End of capture -> " + self.check_state())
+                # print("End of capture -> " + self.check_state())
                 
                 # Add to successful captures
                 __successful_captures = __successful_captures + 1
@@ -441,13 +441,13 @@ class FrameController:
                 self.__unset_capture_start()
                 self.__unset_frame_data_sent()
                 self.__unset_scan_done()
-                print("Check capture done true-> " + self.check_state())
+                # print("Check capture done true-> " + self.check_state())
                 return 0
             
             # If the capture is still running, wait for it to finish
             elif self.check_capture_running():
                 time.sleep(0.001)
-                print("Check capture done false-> " + self.check_state())
+                # print("Check capture done false-> " + self.check_state())
                 
             # If the capture isn't running, end the process
             else:

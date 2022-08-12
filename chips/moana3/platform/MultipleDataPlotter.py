@@ -265,7 +265,7 @@ class MultipleDataPlotter:
                 if self.fix_y_max:
                     self.__plot_axes[ax].set_ylim((ymin, self.__ymax))
                 else:
-                    self.__plot_axes[ax].set_ylim((ymin, 4095))
+                    self.__plot_axes[ax].set_ylim((ymin, 1048575))
                 
                 # Spawn subplots
                 for pattern in range(self.__patterns_per_frame):
@@ -387,7 +387,7 @@ class MultipleDataPlotter:
                 self.__plot_axes[ax].set_xlim((0, 150))
                 
                   # Set y-axis range
-                self.__plot_axes[ax].set_ylim((0, 4095))
+                self.__plot_axes[ax].set_ylim((0, 1048575))
                 
             # Indicate plot has been spawned
             self.__plot_figure_spawned = True
