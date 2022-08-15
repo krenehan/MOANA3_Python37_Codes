@@ -21,7 +21,6 @@ vcsel_setting                       = 2
 # List of time gating values to iterate through
 time_gate_list = [0, ]
 
-
 # Test conditions to propagate to log file
 conditions = 'dummy'
 
@@ -128,7 +127,7 @@ for time_gate_value in time_gate_list:
         date_time=str(datetime.datetime.now())
         
         # Create the results directory
-        results_dir = '../../data/flex_pulseox/'
+        results_dir = '../../data/irf_full_characterization/'
         if not os.path.exists(results_dir):
             os.makedirs(results_dir)
         
