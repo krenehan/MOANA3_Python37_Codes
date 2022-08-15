@@ -452,7 +452,7 @@ class FrameController:
             # If the capture isn't running, end the process
             else:
                 time.sleep(0.001)
-                raise FrameControllerError("Capture did not start")
+                # raise FrameControllerError("Capture did not start")
         
         # If we try 2000 times and still haven't gotten a capture, we quit
         raise FrameControllerError("Capture did not finish")

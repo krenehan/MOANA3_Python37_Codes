@@ -11,13 +11,19 @@ from copy import deepcopy
 number_of_captures = 1000
 
 # VCSEL bias setting
-vcsel_bias                          = 1.4
+vcsel_bias                          = 0
 active_vcsel                        = 0
-vcsel_setting                       = 2
+vcsel_setting                       = 3
 ir_vcsel                            = False
 
 # Test conditions to propagate to log file
-conditions = 'dummy'
+
+conditions = "emitter" + str(active_vcsel) + "_" + \
+            "setting" + str(vcsel_setting) + "_" + \
+            str(vcsel_bias).replace(".", "p") + "V"
+if ir_vcsel:
+    conditions = conditions + "_ir"
+            
 
 
 # =============================================================================
@@ -208,7 +214,6 @@ for time_gate_value in time_gate_list:
     # =============================================================================
     # Test settings that are dynamically updated or stay constant
     # =============================================================================
-    subtractor_value                    = int(round((1/clk_freq) * 0.5 / 70e-12, 0)) -50
     period                              = round(1/clk_freq*1e9, 1)
     number_of_bins                      = 150
     bin_size                            = 12
@@ -336,10 +341,16 @@ for time_gate_value in time_gate_list:
             scan_bits[i].PattResetExtEnable    = '0'
                 
             # Configure VCSELs
-            scan_bits[i].VCSELWave1Enable         = '1'    
             scan_bits[i].VCSELEnableWithScan        = '1'     
-            scan_bits[i].VCSELEnableControlledByScan        = '1' 
-            scan_bits[i].VCSELWave2Enable         = '0'
+            scan_bits[i].VCSELEnableControlledByScan        = '1'
+            
+            # VCSEL selection
+            if i == active_vcsel:
+                scan_bits[i].VCSELWave1Enable         = '0' if ir_vcsel else '1'
+                scan_bits[i].VCSELWave2Enable         = '1' if ir_vcsel else '0'
+            else:
+                scan_bits[i].VCSELWave1Enable         = '0'
+                scan_bits[i].VCSELWave2Enable         = '0'
             
             # Configure TxData
             scan_bits[i].TestPattEnable        = '0'
@@ -415,7 +426,7 @@ for time_gate_value in time_gate_list:
         # =============================================================================
         # Image capture loop
         # =============================================================================
-        for c in range(captures):
+        for c in range(number_of_captures):
             
             # Run capture
             dut.FrameController.run_capture()
@@ -424,8 +435,9 @@ for time_gate_value in time_gate_list:
             dut.read_master_fifo_data(packet)
             
             # Save
-            np.save(os.path.join(experiment_directory, str(c) + ".npy"), packet.data)
-
+            if(logging):
+                np.save(os.path.join(experiment_dir, str(c) + ".npy"), packet.data)
+            
  
             # Update the plot
             if plotting:
