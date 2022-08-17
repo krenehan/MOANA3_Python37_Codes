@@ -304,7 +304,7 @@ for time_gate_value in time_gate_list:
             scan_bits[i].AQCDLLCoarseWord      = np.binary_repr( (dword&0b11110000) >> 4, 4)
             scan_bits[i].AQCDLLFineWord        = np.binary_repr((dword&0b1110) >> 1, 3)
             scan_bits[i].AQCDLLFinestWord      = np.binary_repr((dword&0b1), 1)
-            scan_bits[i].DriverDLLWord         = np.binary_repr(31, 5)
+            scan_bits[i].DriverDLLWord         = np.binary_repr(20, 5)
             scan_bits[i].ClkFlip               = '1'
             scan_bits[i].ClkBypass             = '0'
             
