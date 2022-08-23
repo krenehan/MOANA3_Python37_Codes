@@ -434,7 +434,8 @@ class FrameController:
     def __run_capture_done(self):
         
         # Verify that capture is done
-        for tries in range(0, 2000):
+        # for tries in range(0, 2000):
+        while True:
             
             # If capture is done, unset relevant bits and end loop
             if self.check_capture_done():
@@ -463,9 +464,13 @@ class FrameController:
     # ====================================================
     def __run_capture_idle(self):
         
-        # Check that capture is idle
-        if (not self.check_capture_idle()):
-            raise FrameControllerError("Frame controller not idle")
+        # # Check that capture is idle
+        # if (not self.check_capture_idle()):
+        #     raise FrameControllerError("Frame controller not idle")
+        
+        while True:
+            if self.check_capture_idle():
+                break
     
     
     # ====================================================
@@ -484,7 +489,8 @@ class FrameController:
                 self.__unset_frame_data_sent()
                 break
             else:
-                raise FrameControllerError("Frame data not received")
+                pass
+                # raise FrameControllerError("Frame data not received")
     
     
     # ====================================================
