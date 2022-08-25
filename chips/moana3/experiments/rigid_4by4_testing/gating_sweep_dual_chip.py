@@ -171,7 +171,8 @@ for time_gate_value in time_gate_list:
     period                              = round(1/clk_freq*1e9, 1)
     number_of_bins                      = 150
     bin_size                            = 12
-    gating_delay                        = period + 150e-3 + time_gate_value -2
+    requested_delay                     = period + time_gate_value 
+    duty_cycle                          = 0.5 
     
     
     # =============================================================================
@@ -216,12 +217,14 @@ for time_gate_value in time_gate_list:
     serial_number = dut.fpga_interface.xem.GetSerialNumber()
     print("Serial Number: " + serial_number)
 
-    # Setup the delay line
+    # # Setup the delay line
     # dut.DelayLine.set_clk_flip(clk_flip)
-    # bypass, coarse, fine = dut.DelayLine.set_delay_line(gating_delay)
+    dut.DelayLine.specify_clock(period,duty_cycle) 
+    clk_flip, coarse, fine, finest, actual_delay_ns = dut.DelayLine.get_setting(requested_delay)
+    
     # time_gating_delay = dut.DelayLine.get_delay(coarse, fine)
-    bypass, coarse, fine = 0, 0, 0
-    time_gating_delay=0
+    # bypass, coarse, fine = 0, 0, 0
+    # time_gating_delay=0
     
     # if plotting:
         
@@ -299,13 +302,13 @@ for time_gate_value in time_gate_list:
             
             
             # Configuring Delay Lines
-            dword = 140
+            # dword = 140
 
-            scan_bits[i].AQCDLLCoarseWord      = np.binary_repr( (dword&0b11110000) >> 4, 4)
-            scan_bits[i].AQCDLLFineWord        = np.binary_repr((dword&0b1110) >> 1, 3)
-            scan_bits[i].AQCDLLFinestWord      = np.binary_repr((dword&0b1), 1)
-            scan_bits[i].DriverDLLWord         = np.binary_repr(20, 5)
-            scan_bits[i].ClkFlip               = '1'
+            scan_bits[i].AQCDLLCoarseWord      = np.binary_repr(coarse, 4)
+            scan_bits[i].AQCDLLFineWord        = np.binary_repr(fine, 3)
+            scan_bits[i].AQCDLLFinestWord      = np.binary_repr(finest, 1)
+            scan_bits[i].DriverDLLWord         = np.binary_repr(4, 5)
+            scan_bits[i].ClkFlip               = np.binary_repr(clk_flip,1)
             scan_bits[i].ClkBypass             = '0'
             
             # Configure pattern reset signal

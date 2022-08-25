@@ -1274,7 +1274,7 @@ class DelayLine:
     def __get_setting_clk_flip(self, requested_delay_ns):
         
         # Subtract the base delay and the positive phase of the clock period
-        adjusted_delay_ns = requested_delay_ns - self.base_delay_ns - self.__clk_positive_time_ns / 2.0
+        adjusted_delay_ns = requested_delay_ns - self.base_delay_ns - self.__clk_positive_time_ns
         
         # Find correct delay code
         if (adjusted_delay_ns < 0.044):

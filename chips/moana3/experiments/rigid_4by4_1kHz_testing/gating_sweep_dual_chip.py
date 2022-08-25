@@ -8,16 +8,16 @@ from copy import deepcopy
 # =============================================================================
 
 # Number of captures per time gating setting
-number_of_captures = 1000
+number_of_captures = 100
 
 # MOANA2 VCSEL bias setting
-vcsel_bias                          = 0
+vcsel_bias                          = 0.8
 
 # Configurable
-pll_clk_freq                        = '50MHz'
+pll_clk_freq                        = '500Hz'
 
 # Depend on clock waveform
-subtractor_value                    = 155 # (Positive phase of chip clock) / 70 ps
+subtractor_value                    = 155 #155 # (Positive phase of chip clock) / 70 ps
 
 # Test conditions to propagate to log file
 
@@ -31,7 +31,7 @@ conditions = "freq" + pll_clk_freq + "_" + \
 # Integration time = meas_per_patt * 1/clk_freq * patt_per_frame * number_of_frames
 # =============================================================================
 number_of_chips                     = 16
-meas_per_patt                       = 500000
+meas_per_patt                       = 10000
 patt_per_frame                      = 1
 number_of_frames                    = 1
 clk_freq                            = 50e6
@@ -42,7 +42,7 @@ spad_voltage                        = 25.0
 vrst_voltage                        = 3.3
 time_gate_list                      = [0, ]
 active_vcsel                        = 0
-vcsel_setting                       = 0
+vcsel_setting                       = 4
 ir_vcsel                            = False
 
 # Report integration time
@@ -122,9 +122,9 @@ for time_gate_value in time_gate_list:
     # Logging Setup
     # =============================================================================
     if logging:
-        
+                    
         # Create the results directory
-        results_dir = '../../data/irf_full_characterization/data/'
+        results_dir = '../../data/rigid_4by4_1kHz/data/'
         if not os.path.exists(results_dir):
             os.makedirs(results_dir)
                         
@@ -199,7 +199,7 @@ for time_gate_value in time_gate_list:
         ts_file = open(os.path.join(experiment_directory, "test_setup.txt"), 'w')
         ts_file.write(str(s))
         ts_file.close()
-            
+        
             
     
     
@@ -346,7 +346,13 @@ for time_gate_value in time_gate_list:
             scan_bits[i].VCSELEnableControlledByScan        = '1'
             
             # VCSEL selection
-            scan_bits[i].VCSELWave1Enable         = '0'
+            
+            # if i == 0:
+            #     scan_bits[i].VCSELWave1Enable         = '1'
+            # else:
+            #     scan_bits[i].VCSELWave1Enable         = '0'
+                
+            scan_bits[i].VCSELWave1Enable         = '1'
             scan_bits[i].VCSELWave2Enable         = '0'
             
             # Configure TxData
@@ -424,16 +430,22 @@ for time_gate_value in time_gate_list:
         # Image capture loop
         # =============================================================================
         for c in range(number_of_captures):
+            # Run capture
+            dut.FrameController.set_fsm_bypass()
+            num_sleeps = int(meas_per_patt * 1/1e3 / 100e-3)
+            for n in range (num_sleeps):
+                time.sleep(100e-3)    
+            dut.FrameController.unset_fsm_bypass()
             
             # Run capture
-            dut.FrameController.run_capture()
+            # dut.FrameController.run_capture()
             
             # Read the data
             dut.read_master_fifo_data(packet)
             
             # Save
             if(logging):
-                np.save(os.path.join(experiment_dir, str(c) + ".npy"), packet.data)
+                np.save(os.path.join(experiment_directory, str(c) + ".npy"), packet.data)
             
  
             # Update the plot
@@ -450,6 +462,4 @@ for time_gate_value in time_gate_list:
         dut.fpga_interface.xem.Close()
         if data_plotter_created:
             data_plotter.close()
-        if logging:
-            print("Closing log file")
-            log_file.close()
+

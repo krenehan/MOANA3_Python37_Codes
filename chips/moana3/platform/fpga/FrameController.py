@@ -726,13 +726,13 @@ class FrameController:
             raise FrameControllerError("Measurements per pattern cannot exceed " + str(2**24-1))
             
         
-        # Check that data streamout has adequate time to complete
-        min_meas_per_patt = int(self.txperiod / self.period * self.__number_of_words_per_histogram * 16)
-        if min_meas_per_patt >= self.__measurements_per_pattern:
-            if min_meas_per_patt < 2**24-1:
-                raise FrameControllerError("Insufficient time for data streamout in current configuration" + "\n" + "Increase measurements per pattern to at least " + str(min_meas_per_patt))
-            else:
-                raise FrameControllerError("Insufficient time for data streamout in current configuration" + "\n" + "Increase TxRefClk frequency or decrease RefClk frequency")
+        # # Check that data streamout has adequate time to complete
+        # min_meas_per_patt = int(self.txperiod / self.period * self.__number_of_words_per_histogram * 16)
+        # if min_meas_per_patt >= self.__measurements_per_pattern:
+        #     if min_meas_per_patt < 2**24-1:
+        #         raise FrameControllerError("Insufficient time for data streamout in current configuration" + "\n" + "Increase measurements per pattern to at least " + str(min_meas_per_patt))
+        #     else:
+        #         raise FrameControllerError("Insufficient time for data streamout in current configuration" + "\n" + "Increase TxRefClk frequency or decrease RefClk frequency")
                 
         # Check the number of patterns
         if self.__patterns_per_frame > 16:
