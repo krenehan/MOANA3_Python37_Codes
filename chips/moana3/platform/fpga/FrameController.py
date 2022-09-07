@@ -364,10 +364,17 @@ class FrameController:
             raise FrameControllerError("Must call send_frame_data before calling send_data_stream_config")
         
         # Calculate number of 16-bit words in a single transfer for a single chip
-        self.__number_of_words_per_transfer = int(self.__number_of_frames * self.__patterns_per_frame * self.__number_of_words_per_histogram)
+        self.__number_of_words_per_transfer = self.__number_of_words_per_histogram
+        
+        # Check that number of words per transfer is divisible by 2
+        if (self.__number_of_words_per_transfer % 2):
+            raise FrameControllerError("Number of words per transfer is not divisible by 2")
+            
+        # Divide by 2
+        self.__number_of_words_per_transfer = self.__number_of_words_per_transfer // 2
             
         # Send to frame controller
-        self.__update_data_stream_words_per_transfer(self.__number_of_words_per_transfer)
+        self.__update_data_stream_words_per_transfer(self.__number_of_words_per_transfer) # (Added divide by 2 for RAM controller)
         
         # Indicate that data stream config was sent
         self.__data_stream_config_sent = True
@@ -725,14 +732,9 @@ class FrameController:
         if self.__measurements_per_pattern > 2**24-1:
             raise FrameControllerError("Measurements per pattern cannot exceed " + str(2**24-1))
             
-        
-        # # Check that data streamout has adequate time to complete
-        # min_meas_per_patt = int(self.txperiod / self.period * self.__number_of_words_per_histogram * 16)
-        # if min_meas_per_patt >= self.__measurements_per_pattern:
-        #     if min_meas_per_patt < 2**24-1:
-        #         raise FrameControllerError("Insufficient time for data streamout in current configuration" + "\n" + "Increase measurements per pattern to at least " + str(min_meas_per_patt))
-        #     else:
-        #         raise FrameControllerError("Insufficient time for data streamout in current configuration" + "\n" + "Increase TxRefClk frequency or decrease RefClk frequency")
+        # Check that number of words per transfer is divisible by 4 (because of 32->128 FIFO)
+        if ( (self.__number_of_words_per_transfer * self.__number_of_chips) % 4):
+            raise FrameControllerError("The total number of 32b bin values (chips*frames*patterns*bins) transferred from the FPGA to the PC must be divisible by 4")
                 
         # Check the number of patterns
         if self.__patterns_per_frame > 16:
