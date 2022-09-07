@@ -22,25 +22,16 @@ vcsel_setting                       = 2
 time_gate_list = [0, ]
 
 
-# Test conditions to propagate to log file
-conditions = 'dummy'
-
-# Use to keep track of time
-time_init = 0.0
-time_recorded = False
-
-
 # =============================================================================
 # Test settings
 # Integration time = meas_per_patt * 1/clk_freq * patt_per_frame * number_of_frames
 # =============================================================================
-meas_per_patt                       = 32000
+meas_per_patt                       = 100000
 patt_per_frame                      = 1
-number_of_frames                    = 10
-tx_refclk_freq                      = 20e6
-clk_flip                            = True
+number_of_frames                    = 1
 spad_voltage                        = 27.7
 vrst_voltage                        = 3.3
+pad_captured_mask                   = 0b11
 
 # Report integration time
 integration_time = round(meas_per_patt * 1/clk_freq * patt_per_frame * number_of_frames * 1000, 1)
@@ -57,14 +48,9 @@ pattern_pipe =  np.zeros((patt_per_frame, number_of_chips), dtype=bool)
 # =============================================================================
 # Top-level options
 # =============================================================================
-# Enabling this will export data to log file 
-logging = False
 
 # Enabling this will show the plots as data is collected
 plotting = True
-
-# Enabling this will show the scan settings so that they can be verified
-print_scan_results = False
 
 # These options control the clock level shifter. Leave these alone for the time being.
 use_clock_level_shifter = True
@@ -111,47 +97,12 @@ for time_gate_value in time_gate_list:
     vcsel_condition = "vcsel" + str(round(vcsel_bias, 2)).replace('.', 'p')
     clk_condition = "clk" + str(int(clk_freq / 1e6)) + "MHz"
     time_gate_condition = str(time_gate_value) + "ns"
-    full_conditions = conditions + "_" + vcsel_condition + "_" + clk_condition + "_" + time_gate_condition
+    full_conditions = vcsel_condition + "_" + clk_condition + "_" + time_gate_condition
     print("Conditions: " + full_conditions)
     
     # Waiting times
     config_wait  = 0.3
     ldo_wait = 0.5
-    
-    
-    # =============================================================================
-    # Logging Setup
-    # =============================================================================
-    if logging:
-        # Grab the current date and time
-        date_time=str(datetime.datetime.now())
-        
-        # Create the results directory
-        results_dir = '../../data/flex_pulseox/'
-        if not os.path.exists(results_dir):
-            os.makedirs(results_dir)
-        
-        # Create log_file_name
-        log_file_name = "%s_%s-%s-%s.csv" % (full_conditions, date_time[0:10], date_time[11:13], date_time[14:16])
-        
-        # File header
-        header =       'Time (s)' + ','+ 'Delay'+','
-        for i in range(number_of_chips):
-            header = header + 'FIFO ' + str(i) + ' Data' + ','
-        header = header + \
-                               'Clock Frequency'            + ',' + \
-                               'Number of Frames'           + ',' + \
-                               'Patterns per Frame'         + ',' + \
-                               'Measurements per Pattern'   + ',' + \
-                               'Subtractor Value'           + ',' + \
-                               'ClkFlip'                    + ',' + \
-                               'Driver Setting'             + ',' + \
-                               'SPAD Voltage'               + ',' + \
-                               'VRST Voltage'               + ',' + \
-                               'VCSEL Bias'                 + ',' + \
-                               'Pattern Pipe'               + '\n'
-        log_file = open(results_dir + log_file_name, 'w')
-        log_file.write(header)
     
     
     # =============================================================================
@@ -166,11 +117,11 @@ for time_gate_value in time_gate_list:
     # =============================================================================
     # Test settings that are dynamically updated or stay constant
     # =============================================================================
-    subtractor_value                    = int(round((1/clk_freq) * 0.5 / 70e-12, 0)) -50
+    subtractor_value                    = int(round((1/clk_freq) * 0.5 / 65e-12, 0))
     period                              = round(1/clk_freq*1e9, 1)
     number_of_bins                      = 150
     bin_size                            = 12
-    gating_delay                        = period + 150e-3 + time_gate_value -2
+    requested_delay                     = period + time_gate_value - 2
     
     
     # =============================================================================
@@ -209,22 +160,21 @@ for time_gate_value in time_gate_list:
     dut = test_platform.TestPlatform("moana3")
     
     # Program the FPGA
-    dut.init_fpga(bitfile_path = paths.bitfile_path, refclk_freq = clk_freq, tx_refclk_freq = tx_refclk_freq, init_pll=True)
+    dut.init_fpga(bitfile_path = paths.bitfile_path, refclk_freq=clk_freq)
 
     # Print the serial number of the device
     serial_number = dut.fpga_interface.xem.GetSerialNumber()
     print("Serial Number: " + serial_number)
 
     # Setup the delay line
-    dut.DelayLine.set_clk_flip(clk_flip)
-    bypass, coarse, fine = dut.DelayLine.set_delay_line(gating_delay)
-    time_gating_delay = dut.DelayLine.get_delay(coarse, fine)
+    dut.DelayLine.specify_clock(period, 0.5) 
+    clk_flip, coarse, fine, finest, actual_delay_ns = dut.DelayLine.get_setting(requested_delay)
     
     if plotting:
         
         # Propagate settings to MultipleDataPlotter
         data_plotter.set_coarse_fine([coarse]*number_of_chips, [fine]*number_of_chips)
-        data_plotter.set_gate_delay([time_gating_delay]*number_of_chips)
+        data_plotter.set_gate_delay([requested_delay]*number_of_chips)
     
     
     # =============================================================================
@@ -251,8 +201,8 @@ for time_gate_value in time_gate_list:
         # Power-up chip and reset
         # =============================================================================
         print("Powering on...")
-        dut.enable_vdd_sm_supply()
         dut.enable_hvdd_ldo_supply()
+        dut.enable_cath_sm_supply()
         time.sleep(ldo_wait)
         
         # Issue scan reset
@@ -271,45 +221,52 @@ for time_gate_value in time_gate_list:
         scan_bits = [ dut.chip_infrastructure.get_scan_chain(row[i]).get_scan_chain_segment(cell) for i in range(number_of_chips)]
         
         for i in range(number_of_chips):
+            
             # Configure TDC
-            scan_bits[i].TDCStartSelect            = '0'*8 if external_start else '1'*8
-            scan_bits[i].TDCStopSelect             = '0'*8 if external_stop else '1'*8
-            scan_bits[i].TDCDisable                = '0'*8
-            scan_bits[i].TDCDCBoost                = '0'
+            scan_bits[i].TDCStartSelect        = '0'*8 if external_start else '1'*8
+            scan_bits[i].TDCStopSelect         = '0'*8 if external_stop else '1'*8
+            scan_bits[i].TDCDisable            = '0'*8
+            scan_bits[i].TDCDCBoost            = '0'*8
+            
             
             # Configure Pattern Counter
-            scan_bits[i].MeasPerPatt               = np.binary_repr(meas_per_patt, 15)
-            scan_bits[i].MeasCountEnable           = '1'
+            scan_bits[i].MeasPerPatt           = np.binary_repr(meas_per_patt, 24)
+            scan_bits[i].MeasCountEnable       = '1'
             
-            # Configure Delay Lines
-            scan_bits[i].AQCDLLCoarseWord          = np.binary_repr(coarse, 4)
-            scan_bits[i].AQCDLLFineWord            = np.binary_repr(fine, 3)
-            scan_bits[i].DriverDLLWord             = np.binary_repr(1 << vcsel_setting, 4)
-            scan_bits[i].ClkFlip                   = '1' if clk_flip else '0'
-            scan_bits[i].ClkBypass                 = np.binary_repr(bypass, 1)
+            
+            # Configuring Delay Lines
+            scan_bits[i].AQCDLLCoarseWord      = np.binary_repr(coarse, 4)
+            scan_bits[i].AQCDLLFineWord        = np.binary_repr(fine, 3)
+            scan_bits[i].AQCDLLFinestWord      = np.binary_repr(finest, 1)
+            scan_bits[i].DriverDLLWord         = np.binary_repr(4, 5)
+                
+            scan_bits[i].ClkFlip               = np.binary_repr(clk_flip, 1)
+            scan_bits[i].ClkBypass             = '0'
             
             # Configure pattern reset signal
-            scan_bits[i].PattResetExtSel           = '0'
-            scan_bits[i].PattResetExtEnable        = '0'
-            
-            # Configure VCSEL drivers
-            scan_bits[i].VCSELEnableExt            = '1'
-            scan_bits[i].VCSELEnableSel            = '1' if vcsel_enable_through_scan else '0'
-            scan_bits[i].VCSELWave1Sel             = '1'
-            scan_bits[i].VCSELWave2Sel             = '1'
+            scan_bits[i].PattResetControlledByTriggerExt       = '0' 
+            scan_bits[i].PattResetExtEnable    = '0'
+                
+            # Configure VCSELs
+            scan_bits[i].VCSELWave1Enable         = '1'
+            scan_bits[i].VCSELEnableWithScan        = '0'     
+            scan_bits[i].VCSELEnableControlledByScan        = '1' 
+            scan_bits[i].VCSELWave2Enable         = '0'
             
             # Configure TxData
-            scan_bits[i].TestPattEnable            = '0'
-            scan_bits[i].TestDataIn                = np.binary_repr(20, 10)
-            scan_bits[i].TxDataExtRequestEnable    = '0'
+            scan_bits[i].TestPattEnable        = '0'
+            scan_bits[i].TestDataIn            = np.binary_repr(10, 10)
+            scan_bits[i].TxDataExtRequestEnable = '0'
             
             # Configure subtractor
-            scan_bits[i].TimeOffsetWord            = np.binary_repr((subtractor_value & 0x3F8) >> 3, 7)
-            scan_bits[i].TimeOffsetWordLSBs        = np.binary_repr(subtractor_value & 0x7, 3)*8
-            scan_bits[i].SubtractorBypass          = '0'
+            scan_bits[i].TimeOffsetWord        = np.binary_repr(subtractor_value, 10)         
+
+            scan_bits[i].SubtractorBypass      = '0'
+            
+            scan_bits[i].DynamicConfigEnable = '0'
             
             # Configure SPADs
-            scan_bits[i].SPADEnable                = '1'*64
+            scan_bits[i].SPADEnable            = '1'*64
         
         # Make scan bits for the fpga
         for i in range(number_of_chips):
@@ -321,29 +278,6 @@ for time_gate_value in time_gate_list:
             dut.update_scan_chain(row[i], config_wait)
         scan_bits_received = [dut.chip_infrastructure.get_scan_chain(row[i]).get_scan_chain_segment(cell) for i in range(number_of_chips)]
         
-        # Print results of scan out if requested
-        if print_scan_results:
-            for i in range(number_of_chips):
-                print( "-------- Chip %d --------" % i)
-                print( "Measurements per Pattern : %d" % int(scan_bits_received[i].MeasPerPatt, base=2))
-                print( "Measurement Counter Enable: %d" % int(scan_bits_received[i].MeasCountEnable, base=2))
-                print( "Test Pattern Enable: %d" % int(scan_bits_received[i].TestPattEnable, base=2))
-                print( "Test Data In: %d" % int(scan_bits_received[i].TestDataIn, base=2))
-                print( "TxData External Request Enable: %d" % int(scan_bits_received[i].TxDataExtRequestEnable, base=2))
-                print( "Time Offset Word: %d" % int(scan_bits_received[i].TimeOffsetWord, base=2))
-                print( "Time Offset Word LSBs: %d" % int(scan_bits_received[i].TimeOffsetWordLSBs, base=2))
-                print( "Subtractor Bypass: %d" % int(scan_bits_received[i].SubtractorBypass, base=2))
-                print( "Clock Flip: %d" % int(scan_bits_received[i].ClkFlip, base=2))
-                print( "Clock Bypass: %d" % int(scan_bits_received[i].ClkBypass, base=2))
-                print( "VCSEL Enable Select: %d" % int(scan_bits_received[i].VCSELEnableSel, base=2))
-                print( "VCSEL Enable Ext: %d" % int(scan_bits_received[i].VCSELEnableExt, base=2))
-                print( "VCSEL Wavelength 1: %d" % int(scan_bits_received[i].VCSELWave1Sel, base=2))
-                print( "VCSEL Wavelength 2: %d" % int(scan_bits_received[i].VCSELWave2Sel, base=2))
-                print( "TDC Disabled: %d" % int(scan_bits_received[i].TDCDisable, base=2))
-                print( "TDC Status : %d" % int(scan_bits_received[i].TDCStatus, base=2))
-                print( "TDC Fine Raw : %s" % scan_bits_received[i].TDCFineOutRaw)
-                print( "TDC Coarse Raw : %d" % int(scan_bits_received[i].TDCCoarseOut, base=2))
-        
 
         # =============================================================================
         # Send information to frame controller prior to capture
@@ -353,7 +287,8 @@ for time_gate_value in time_gate_list:
                                             number_of_chips, \
                                             number_of_frames,   \
                                             patt_per_frame,     \
-                                            meas_per_patt       )
+                                            meas_per_patt, \
+                                            pad_captured_mask)
 
         
         # =============================================================================
@@ -368,67 +303,32 @@ for time_gate_value in time_gate_list:
         # =============================================================================
         for i in range(captures):
             
-            if not time_recorded:
-                time_init = time.time()
-                timestamp = 0.0
-                time_recorded = True
-            else:
-                timestamp = time.time() - time_init                
-            
             # Run capture
             dut.FrameController.run_capture()
             
-            # dut.check_fifo_data_counts()
+            # Check counts after capture
+            print("Packets after to capture " + str(i) + ":")
+            dut.check_fifo_data_counts()
 
-            
             # Read the data
             dut.read_master_fifo_data(packet)
+            
+            # Check counts before capture
+            print("Packets after read " + str(i) + ":")
+            dut.check_fifo_data_counts() 
 
  
             # Update the plot
             if plotting:
                 data_plotter.update_plot() 
-                
-            # Write to log file
-            if logging:
-                log_data = str(timestamp) + ',' + str(time_gating_delay) + ','
-                for chip in range(number_of_chips):
-                    log_data = log_data + data[chip] + ','
-                log_data = log_data +  \
-                                       str(clk_freq)                + ',' + \
-                                       str(number_of_frames)        + ',' + \
-                                       str(patt_per_frame)          + ',' + \
-                                       str(meas_per_patt)           + ',' + \
-                                       str(subtractor_value)        + ',' + \
-                                       str(int(clk_flip))           + ',' + \
-                                       str(vcsel_setting)           + ',' + \
-                                       str(spad_voltage)            + ',' + \
-                                       str(vrst_voltage)            + ',' + \
-                                       str(vcsel_bias)              + ',' + \
-                                       str(pipe_pattern)            + '\n'
-                log_file.write(log_data)
-            
-            # # Uncomment for step-through debug process
-            # print("Capture " + str(i))
-            # dut.check_fifo_data_counts()
-            # if i == 0:
-            #     dut.read_master_fifo_data(packet)
-            # if i % 10 == 0:
-            #     input()
-
-            
-        # Print frame rate
-        print("Frame Rate is " + str(int(i/timestamp)) + " Hz")
     
     # =============================================================================
     # Disable supplies, close plots, log files, and FPGA on exit
     # =============================================================================
     finally:
         dut.disable_hvdd_ldo_supply()
+        dut.disable_cath_sm_supply()
         print("Closing FPGA")
         dut.fpga_interface.xem.Close()
         if data_plotter_created:
             data_plotter.close()
-        if logging:
-            print("Closing log file")
-            log_file.close()

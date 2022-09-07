@@ -3,10 +3,14 @@ from decimal import Decimal
 import random
 import numpy
 
-
+# Extra test comment
 # =============================================================================
 # Setup
 # =============================================================================
+
+# Verbose
+verbose = False
+
 # Set chip number
 number_of_chips = 2
 
@@ -58,7 +62,7 @@ supplt_aux      = None
 # =============================================================================
 refclk_freq = 50e6
 dut = test_platform.TestPlatform("moana3")
-dut.init_fpga(bitfile_path = paths.bitfile_path)
+dut.init_fpga(bitfile_path = paths.bitfile_path, refclk_freq=50e6)
 
 try:
     # =============================================================================
@@ -68,6 +72,7 @@ try:
     patt_per_frame                  = 1
     number_of_frames                = 1
     period                          = round(1/refclk_freq*1e9, 1)
+    pad_captured_mask               = 0b11
     
     
     # =============================================================================
@@ -145,7 +150,9 @@ try:
     packet = DataPacket.DataPacket(number_of_chips, number_of_frames, patt_per_frame, meas_per_patt, period, compute_mean=False)
         
     # Test pattern in, test pattern out loop
-    for DataIn in (0b1111000011,):#range(1, 1023, 8):
+    for DataIn in (0b1011,):#range(1, 1023, 8):
+        
+        expected_packet = (DataIn << 10) + DataIn
         
         # Console header
         print("------------ Test Pattern Data: " + np.binary_repr(DataIn, 10) + " ------------")
@@ -165,77 +172,56 @@ try:
                                             number_of_chips, \
                                             number_of_frames,   \
                                             patt_per_frame,     \
-                                            meas_per_patt       )
+                                            meas_per_patt, \
+                                            pad_captured_mask)
             
         # Run capture
-        dut.FrameController.set_fsm_bypass()
-        time.sleep(0.05)
-        dut.FrameController.unset_fsm_bypass()
-        # dut.FrameController.run_capture()
-        
-        # Read from pipe
-        for chip in range(number_of_chips):
-            packet.rbuf = bytearray(376*1*number_of_frames*patt_per_frame)
-            dut.fpga_interface.xem.ReadFromPipeOut(0xA1, packet.rbuf)
-            
-            # Raw string
-            rs = dut.fpga_interface.decode_data_fifo_to_string(packet)
-            rs = rs[::-1]
-            # print(rs)
-            
-            # Isolate the packet from chip 0
-            s = rs[8:20*150*patt_per_frame*number_of_frames]
-            
-            # Work through the packet
-            print("------------------------- Chip " + str(chip) + " -------------------------")
-            for p in range(len(s) // 20):
-                
-                # Grab the part of the string
-                ps = s[p*20:(p+1)*20]
-                print('Packet {0:03d}'.format(p) + ': ' + ps[0:10] + " + " + ps[10:20])
-            
-        #     # Reorganize the bits
-        #     ps = ps[0:4] + ps[0:16]
-        #     # print('Packet ' + str(p) + ': ' + ps)
+        dut.FrameController.run_capture()
+    
+        # Read the FIFOs
+        dut.read_master_fifo_data(packet)
         
         # Work directly with receive array
-        # receive_array = np.flip(np.reshape(packet.receive_array, (number_of_chips, number_of_frames*patt_per_frame*150)), axis=0)
+        receive_array = np.flip(np.reshape(packet.receive_array, (number_of_chips, number_of_frames*patt_per_frame*150)), axis=0)
 
-        # # Figure out if the test was passed
-        # test_passed = [True for chip in range(number_of_chips)]
-        # for chip in range(number_of_chips):
+        # Figure out if the test was passed
+        test_passed = [True for chip in range(number_of_chips)]
+        for chip in range(number_of_chips):
             
-        #     # Unpack data into bits
-        #     l = []
-        #     for i in range(len(receive_array[chip])):
-        #         l.append(np.binary_repr(receive_array[chip][i], 12))
-        #     data = ''.join(l)
+            # Unpack data into bits
+            l = []
+            for i in range(len(receive_array[chip])):
+                l.append(np.binary_repr(receive_array[chip][i], 20))
+            data = ''.join(l)
             
-        #     # Check 
-        #     for frame in range(1, number_of_frames):
-        #         bits_in_frame = patt_per_frame * 1800
-        #         for j in range(180):
-        #             packet_data = data[frame*bits_in_frame+10*j:frame*bits_in_frame+10*(j+1)]
-        #             # print("Packet data is " + str(int(packet_data, base=2)) + " and should be " + str(DataIn))
-        #             if (int(packet_data, base = 2) != DataIn):
-        #                 test_passed[chip] = False
-        #                 break
-        #         if test_passed[chip] == False:
-        #             break
+            # Check 
+            for frame in range(number_of_frames):
+                bits_in_frame = patt_per_frame * 3000
+                for j in range(300):
+                    packet_data = data[frame*bits_in_frame+10*j:frame*bits_in_frame+10*(j+1)]
+                    if verbose:
+                        print("Packet data is " + str(int(packet_data, base=2)) + " and should be " + str(DataIn))
+                        print("Packet data is " + packet_data + " and should be " + str(np.binary_repr(DataIn, 10)))
+                    if (int(packet_data, base = 2) != DataIn):
+                        test_passed[chip] = False
+                        break
+                if test_passed[chip] == False:
+                    break
                         
-        # # Print passing chips
-        # print("Chips (", end='')
-        # for i in range(number_of_chips):
-        #     if test_passed[i]:
-        #         print(str(i) + ", ", end='')        
-        # print(") passed")
+        # Print passing chips
+        print("Chips (", end='')
+        for i in range(number_of_chips):
+            if test_passed[i]:
+                print(str(i) + ", ", end='')        
+        print(") passed")
               
-        # # Print failing chips
-        # print("Chips (", end='')
-        # for i in range(number_of_chips):
-        #     if not test_passed[i]:
-        #         print(str(i) + ", ", end='')        
-        # print(") failed")
+        # Print failing chips
+        print("Chips (", end='')
+        for i in range(number_of_chips):
+            if not test_passed[i]:
+                print(str(i) + ", ", end='')        
+        print(") failed")
+            
 
 finally:
     print("Closing FPGA")

@@ -28,11 +28,10 @@ class TestingPaths:
 
         # Bitfile path
         self.bitfile_path = os.path.join(os.path.join(os.path.join(self.platform_dir, "fpga"), "bit_files"), \
-            # 'MOANA3_INTERNAL_CLOCKS_50MHz_nopadreverse.bit') # Uncomment line for internal clock
-            # 'MOANA3_INTERNAL_CLOCKS_50MHz_noreverse.bit') # Uncomment line for internal clock
-            # 'MOANA3_INTERNAL_CLOCKS_50MHz_fullchain.bit') # Uncomment line for internal clock
+            # 'MOANA3_RIGID2BY1_INTERNAL_CLOCKS_6MHz.bit')
+            'MOANA3_RIGID2BY1_INTERNAL_CLOCKS_RAM_CONTROLLER_6MHz.bit')
             # 'MOANA3_INTERNAL_CLOCKS_VAR_fullchain.bit')
-            'MOANA3_EXTERNAL_REFCLK_fullchain.bit')
+            # 'MOANA3_EXTERNAL_REFCLK_fullchain.bit')
             # 'MOANA3_EXTERNAL_REFCLK.bit') # Uncomment line for external laser clock
 
 

@@ -5,8 +5,8 @@ import numpy
 import matplotlib.pyplot as plt
 
 legend = []
-for dword in range(0, 16):
-# if True:
+# for dword in range(0, 16):
+if True:
     # =============================================================================
     # Setup
     # =============================================================================
@@ -103,12 +103,12 @@ for dword in range(0, 16):
             scan_bits[i].MeasCountEnable       = '1'
             
             # Configuring Delay Lines
-            # dword = 3
+            dword = 3
             scan_bits[i].AQCDLLCoarseWord      = np.binary_repr( (dword&0b11110000) >> 4, 4)
             scan_bits[i].AQCDLLFineWord        = np.binary_repr((dword&0b1110) >> 1, 3)
             scan_bits[i].AQCDLLFinestWord      = np.binary_repr((dword&0b1), 1)
             scan_bits[i].DriverDLLWord         = np.binary_repr(5, 5)
-            scan_bits[i].ClkFlip               = '0'
+            scan_bits[i].ClkFlip               = '1'
             scan_bits[i].ClkBypass             = '0'
             
             # Configure pattern reset signal
@@ -127,7 +127,7 @@ for dword in range(0, 16):
             scan_bits[i].TxDataExtRequestEnable = '0'
             
             # Configure subtractor
-            scan_bits[i].TimeOffsetWord        = np.binary_repr(354, 10)
+            scan_bits[i].TimeOffsetWord        = np.binary_repr(454, 10)
             scan_bits[i].SubtractorBypass      = '0'
             
             scan_bits[i].DynamicConfigEnable = '0'
@@ -211,7 +211,7 @@ for dword in range(0, 16):
                 if chip == 1:
                     # plt.figure()
                     x = np.argmax(packet_data)
-                    plt.plot(np.linspace(0, x-1, num=x)*60, packet_data[0:x])
+                    plt.plot( packet_data)
                     legend.append(str(dword))
                 
             

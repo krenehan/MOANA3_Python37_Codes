@@ -33,7 +33,7 @@ number_of_scans = 10
 # Chip Operation Switches
 # =============================================================================
 # TDC Resolution - True sets TDC to high resolution mode (70ps), False sets TDC to low resolution mode (150ps)
-TDCDCBoost = True
+TDCDCBoost = False
 
 # Start/Stop Source - True sets Start/Stop to come from StartExt and StopExt SMAs, False sets Start/Stop to come from SPADs
 ExternalStart    = True
@@ -41,7 +41,7 @@ ExternalStop     = True
 
 # VCSEL Enable Source - True causes VCSEL to be enabled by setting VCSELEnableExt scan chain bit, False causes VCSEL to be enabled by SEnable signal
 VCSELEnableThroughScan = True
-VCSELEnableExt = True
+VCSELEnableExt = False
 
 # Pattern Reset Sources - Don't touch these :D
 PatternResetWithExternalSignal = False # If True, reset pattern through external signal selected below
@@ -78,6 +78,7 @@ try:
     # =============================================================================
     # Power Setup - Initialize power supplies
     # =============================================================================
+    dut.enable_hvdd_ldo_supply()
     time.sleep(ldo_wait)
     
     
@@ -102,7 +103,7 @@ try:
             # Configure TDC
             scan_bits[i].TDCStartSelect        = '0'*8 if ExternalStart else '1'*8
             scan_bits[i].TDCStopSelect         = '0'*8 if ExternalStop else '1'*8
-            scan_bits[i].TDCDisable            = '11111111'
+            scan_bits[i].TDCDisable            = '1' * 8
             scan_bits[i].TDCDCBoost            = '0'*8 if TDCDCBoost else '1'*8
             
             # Configure Pattern Counter
@@ -114,8 +115,8 @@ try:
             scan_bits[i].AQCDLLFineWord        = np.binary_repr(0, 3)
             scan_bits[i].AQCDLLFinestWord      = np.binary_repr(0, 1)
             scan_bits[i].DriverDLLWord         = np.binary_repr(1, 5)
-            scan_bits[i].ClkFlip               = '1'
-            scan_bits[i].ClkBypass             = '0'
+            scan_bits[i].ClkFlip               = '0'
+            scan_bits[i].ClkBypass             = '1'
             
             # Configure pattern reset signal
             scan_bits[i].PattResetControlledByTriggerExt       = '1' if PatternResetWithTriggerExt else '0'
@@ -124,8 +125,8 @@ try:
             # Configure VCSELs
             scan_bits[i].VCSELEnableWithScan        = '1' if VCSELEnableExt else '0'
             scan_bits[i].VCSELEnableControlledByScan        = '1' if VCSELEnableThroughScan else '0'
-            scan_bits[i].VCSELWave1Enable         = '1'
-            scan_bits[i].VCSELWave2Enable         = '1'
+            scan_bits[i].VCSELWave1Enable         = '0'
+            scan_bits[i].VCSELWave2Enable         = '0'
             
             # Configure TxData
             scan_bits[i].TestPattEnable        = '0'
@@ -140,9 +141,6 @@ try:
             
             # Configure SPADs
             scan_bits[i].SPADEnable            = np.binary_repr(0, 64)
-            
-        # Customization for individual chips can be done below
-        # scan_bits[0].VCSELEnableExt = '1'
         
         # Make scan bits for the fpga
         for i in range(number_of_chips):
@@ -174,9 +172,6 @@ try:
             print("TDC Status : %d" % int(scan_bits_received[i].TDCStatus, base=2))
             print("TDC Fine Raw : %s" % scan_bits_received[i].TDCFineOutRaw)
             print("TDC Coarse Raw : %d" % int(scan_bits_received[i].TDCCoarseOut, base=2))
-            
-            # Update FSM settings
-            dut.FrameController.set_fsm_bypass()
                 
         
 
