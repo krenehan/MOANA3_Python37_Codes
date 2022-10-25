@@ -22,8 +22,11 @@ SIGNAL_CLK_SELECT_1 =           0x0100
 # Trigger Ins
 TRIGGER_DATA_STREAM_READ_ACK = 0x0000
 
-# Trigger Outs
+# Data stream trigger Outs
 TRIGGER_DATA_STREAM_READ =      0x0000
+
+# RAM Out Signals
+SIGNAL_RAM_READ =              0x0001
 
 # Software Out Indexes
 TIE_LO_0_INDEX =                0
