@@ -86,6 +86,7 @@ refclk_freq = 50e6
 dut = test_platform.TestPlatform("moana3")
 dut.init_fpga(bitfile_path = paths.bitfile_path, refclk_freq=50e6)
 
+
 try:
     # =============================================================================
     # Frame parameters
