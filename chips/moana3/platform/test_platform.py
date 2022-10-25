@@ -399,6 +399,15 @@ class TestPlatform:
     def check_read_trigger(self):
         return self.fpga_interface.trigger_out(addr.ADDR_TRIGGER_OUT_DATA_STREAM_READ, sig.TRIGGER_DATA_STREAM_READ)
     
+    
+    # ====================================================
+    # Check if RAM trigger has been sent by chip
+    # ====================================================
+    def check_ram_trigger(self):
+        wire_out = self.fpga_interface.wire_out(addr.ADDR_WIRE_OUT_RAM_READ)
+        return bool(wire_out & sig.SIGNAL_RAM_READ)
+    
+    
     # ====================================================
     # Acknowledge the read trigger
     # ====================================================
