@@ -32,6 +32,7 @@ class FrameController:
     __data_stream = False
     
     # Frame data settings
+    __packets_per_transfer = 0
     __number_of_frames = 0
     __patterns_per_frame = 0
     __measurements_per_pattern = 0
@@ -333,6 +334,9 @@ class FrameController:
         
         # Update the measurements per pattern
         self.__update_measurements_per_pattern(measurements_per_pattern)
+        
+        # Update the packets per transfer
+        self.__update_packets_per_transfer(number_of_frames * patterns_per_frame)
         
         # Update the pattern pipe 
         self.__update_pattern_pipe(pattern_pipe)
@@ -638,6 +642,14 @@ class FrameController:
         self.__fpga_interface.wire_in(addr.ADDR_WIRE_IN_PATTERN, patterns_per_frame)
         self.__patterns_per_frame = patterns_per_frame
         
+      
+    # ====================================================
+    # Update the packets in a transfer
+    # ====================================================
+    def __update_packets_per_transfer(self, packets_per_transfer):
+        self.__fpga_interface.wire_in(addr.ADDR_WIREIN_PACKETS_IN_TRANSFER, packets_per_transfer)
+        self.__packets_per_transfer = packets_per_transfer
+        
     
     # ====================================================
     # Read the FIFO size from the FPGA
@@ -740,10 +752,10 @@ class FrameController:
         if self.__patterns_per_frame > 16:
             raise FrameControllerError("Number of patterns must be less than 16")
             
-        # Check that the FIFO won't overflow at this data rate
-        if self.__number_of_words_per_histogram * self.__number_of_frames * self.__patterns_per_frame > self.__fifo_size:
-            a = self.__fifo_size // self.__number_of_words_per_histogram
-            raise FrameControllerError("Number of patterns and frames is too large" + "\n" + "Number of frames * patterns per frame needs to be less than " + str(a))
+        # # Check that the FIFO won't overflow at this data rate
+        # if self.__number_of_words_per_histogram * self.__number_of_frames * self.__patterns_per_frame > self.__fifo_size:
+        #     a = self.__fifo_size // self.__number_of_words_per_histogram
+        #     raise FrameControllerError("Number of patterns and frames is too large" + "\n" + "Number of frames * patterns per frame needs to be less than " + str(a))
             
         # Ensure that number of words per transfer is not too large
         if (self.__number_of_words_per_transfer > 2**16-1):
