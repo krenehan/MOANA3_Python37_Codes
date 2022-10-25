@@ -10,7 +10,6 @@ API for communicating with the Frame Controller on the FPGA.
 import time
 import  __address__ as addr
 from math import ceil
-import numpy as np
 
 
 # ====================================================
@@ -30,15 +29,14 @@ class FrameController:
     __capture_start = False
     __capture_interrupt = False
     __data_stream = False
+    __blitz_mode = True
     
     # Frame data settings
     __packets_per_transfer = 0
     __number_of_frames = 0
     __patterns_per_frame = 0
     __measurements_per_pattern = 0
-    __number_of_bits = 0
     __pad_captured_mask = 0b0000000000000000
-
     
     # Capture wait time (s)
     __capture_wait_time = 0.0
@@ -57,6 +55,7 @@ class FrameController:
     __SIGNAL_FRAME_CONTROLLER_RESET = 0x0010
     __SIGNAL_FSM_BYPASS =             0x0020
     __SIGNAL_DATA_STREAM =            0x0040
+    __SIGNAL_BLITZ_MODE =             0x0080
     
     # Software Out Frame Controller Signals
     __SIGNAL_CAPTURE_IDLE =           0x0020
@@ -72,6 +71,7 @@ class FrameController:
     __STATE_FINISH_CAPTURE =          0x10
     __STATE_RESET =                   0x20
     __STATE_STREAM_RESUME =           0x40
+    __STATE_BLITZ =                   0x80
     
     # Clock period (ns)
     period = 20.0
@@ -112,6 +112,8 @@ class FrameController:
         self.frame_controller_signal['frame_controller_reset'] =    self.__SIGNAL_FRAME_CONTROLLER_RESET
         self.frame_controller_signal['fsm_bypass'] =                self.__SIGNAL_FSM_BYPASS
         self.frame_controller_signal['data_stream'] =               self.__SIGNAL_DATA_STREAM
+        self.frame_controller_signal['blitz_mode'] =                self.__SIGNAL_BLITZ_MODE
+    
     
     # ====================================================
     # Check that the capture is complete
@@ -252,6 +254,36 @@ class FrameController:
         
         # Start stream process
         self.__unset_data_stream()
+        
+        
+    # ====================================================
+    # Run data stream routine
+    # ====================================================
+    def begin_blitz(self):
+        ''' Begin the blitz routine '''
+            
+        # Check that stream configuration was sent
+        if not self.__data_stream_config_sent:
+            raise FrameControllerError("Must call send_data_stream_config before calling begin_blitz")
+            
+        # End scan process
+        self.__set_scan_done()
+        
+        # Send frame data
+        self.__run_send_frame_data()
+        
+        # Start stream process
+        self.__set_blitz_mode()
+        
+        
+    # ====================================================
+    # End data stream routine
+    # ====================================================
+    def end_blitz(self):
+        ''' End the blitz routine '''
+        
+        # Start stream process
+        self.__unset_blitz_mode()
     
     
     # ====================================================
@@ -382,13 +414,6 @@ class FrameController:
         
         # Indicate that data stream config was sent
         self.__data_stream_config_sent = True
-        
-    
-    # # ====================================================
-    # # Set the clock period in nanoseconds so that we can accurately predict how much time is needed for capture to finish
-    # # ====================================================
-    # def set_clock_period(self, clock_period):
-    #     self.period = clock_period
         
         
     # ====================================================
@@ -553,6 +578,14 @@ class FrameController:
         
         
     # ====================================================
+    # Set the blitz_mode bit
+    # ====================================================
+    def __set_blitz_mode(self):
+        self.__tiehi_signal('blitz_mode')
+        self.__blitz_mode = True
+        
+        
+    # ====================================================
     # Tie a signal high
     # ====================================================
     def __tiehi_signal(self, signal_name):
@@ -614,6 +647,14 @@ class FrameController:
     def __unset_data_stream(self):
         self.__tielo_signal('data_stream')
         self.__data_stream = False
+        
+        
+    # ====================================================
+    # Notify the frame controller that blitz mode operation is over
+    # ====================================================
+    def __unset_blitz_mode(self):
+        self.__tielo_signal('blitz_mode')
+        self.__blitz_mode = False
     
     
     # ====================================================
@@ -665,7 +706,6 @@ class FrameController:
         self.__fpga_interface.wire_in(addr.ADDR_WIRE_IN_PAD_CAPTURED_MASK, pad_captured_mask)
         
 
-        
     # ====================================================
     # Update the pattern pipe
     # ====================================================
@@ -782,5 +822,7 @@ class FrameController:
             return "Frame controller state is RESET"
         elif s == self.__STATE_STREAM_RESUME:
             return "Frame controller state is STREAM_RESUME"
+        elif s == self.__STATE_BLITZ:
+            return "Frame controller state is BLITZ"
             
         
