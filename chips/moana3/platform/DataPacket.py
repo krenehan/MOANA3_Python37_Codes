@@ -24,7 +24,7 @@ class DataPacket:
     
     # Constants
     __bins_per_histogram = 150
-    __bits_per_histogram = 3000
+    # __bits_per_histogram = 3000
     __words_per_histogram = 300
     __bytes_per_histogram = 600
 
