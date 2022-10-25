@@ -11,13 +11,13 @@ from copy import deepcopy
 verbose = False
 
 # Number of captures per time gating setting
-captures = 1000
+captures = 3
 
 # Number of chips
 number_of_chips = 2
 
 # VCSEL bias setting
-clk_freq                            = 50e6
+clk_freq                            = 100e6
 vcsel_bias                          = 1.4
 vcsel_setting                       = 2
 
@@ -30,11 +30,19 @@ time_gate_list = [0, ]
 # Integration time = meas_per_patt * 1/clk_freq * patt_per_frame * number_of_frames
 # =============================================================================
 meas_per_patt                       = 50000
-patt_per_frame                      = 1
-number_of_frames                    = 50
+patt_per_frame                      = 16
+number_of_frames                    = 16
 spad_voltage                        = 24.7
 vrst_voltage                        = 3.3
 pad_captured_mask                   = 0b11
+
+# Data rate (chips * bins * bytes per bin) / (measurements * 1/clk_freq) * 1e-6 MB/B
+data_rate = (number_of_chips * 150 * 4) / (meas_per_patt * 1/clk_freq) * 1e-6
+print("Data rate is " + str(round(data_rate, 2)) + " MB/s")
+
+# Transfer size
+transfer_size = number_of_chips * 150 * 4 * patt_per_frame * number_of_frames * 1e-6
+print("Transfer size is " + str(round(transfer_size, 2)) + " MB")
 
 # Report integration time
 integration_time = round(meas_per_patt * 1/clk_freq * patt_per_frame * number_of_frames * 1000, 1)
@@ -302,45 +310,32 @@ for time_gate_value in time_gate_list:
         # =============================================================================
         dut.pulse_signal('cell_reset')
         time.sleep(config_wait)
-        
+
+
+        # =============================================================================
+        # Image capture loop
+        # =============================================================================
         # Read artificial trigger
         dut.check_ram_trigger()
         
         # Enable clock
         dut.FrameController.set_fsm_bypass()
         
+        missed = 0
+        hit = 0
+        
         while(True):
+            # time.sleep(110e-3)
             if dut.check_ram_trigger():
                 
                 dut.read_master_fifo_data(packet)
                 
                 data_plotter.update_plot()
-
-
-        # # =============================================================================
-        # # Image capture loop
-        # # =============================================================================
-        # for i in range(captures):
-            
-        #     # Run capture
-        #     dut.FrameController.run_capture()
-            
-        #     # Check counts after capture
-        #     if verbose:
-        #         print("Packets after to capture " + str(i) + ":")
-        #         dut.check_fifo_data_counts()
                 
-        #     dut.read_master_fifo_data(packet)
-            
-        #     # Check counts before capture
-        #     if verbose:
-        #         print("Packets after read " + str(i) + ":")
-        #         dut.check_fifo_data_counts() 
-
- 
-        #     # Update the plot
-        #     if plotting:
-        #         data_plotter.update_plot() 
+                hit = hit + 1
+                
+            else:
+                missed = missed + 1
                 
     
     # =============================================================================

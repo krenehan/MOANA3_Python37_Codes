@@ -302,51 +302,34 @@ for time_gate_value in time_gate_list:
         # =============================================================================
         dut.pulse_signal('cell_reset')
         time.sleep(config_wait)
-        
+
+
+        # =============================================================================
+        # Image capture loop
+        # =============================================================================
         # Read artificial trigger
         dut.check_ram_trigger()
+        dut.check_read_trigger()
         
-        # Enable clock
-        dut.FrameController.set_fsm_bypass()
+        # Start stream
+        dut.FrameController.begin_stream()        
         
         while(True):
-            if dut.check_ram_trigger():
+            
+            if dut.check_read_trigger():
+                
+                dut.acknowledge_read_trigger()
                 
                 dut.read_master_fifo_data(packet)
                 
                 data_plotter.update_plot()
-
-
-        # # =============================================================================
-        # # Image capture loop
-        # # =============================================================================
-        # for i in range(captures):
-            
-        #     # Run capture
-        #     dut.FrameController.run_capture()
-            
-        #     # Check counts after capture
-        #     if verbose:
-        #         print("Packets after to capture " + str(i) + ":")
-        #         dut.check_fifo_data_counts()
-                
-        #     dut.read_master_fifo_data(packet)
-            
-        #     # Check counts before capture
-        #     if verbose:
-        #         print("Packets after read " + str(i) + ":")
-        #         dut.check_fifo_data_counts() 
-
- 
-        #     # Update the plot
-        #     if plotting:
-        #         data_plotter.update_plot() 
                 
     
     # =============================================================================
     # Disable supplies, close plots, log files, and FPGA on exit
     # =============================================================================
     finally:
+        dut.FrameController.end_stream()
         dut.disable_hvdd_ldo_supply()
         dut.disable_cath_sm_supply()
         print("Closing FPGA")

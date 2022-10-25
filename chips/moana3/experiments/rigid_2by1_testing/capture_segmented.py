@@ -302,45 +302,32 @@ for time_gate_value in time_gate_list:
         # =============================================================================
         dut.pulse_signal('cell_reset')
         time.sleep(config_wait)
-        
-        # Read artificial trigger
-        dut.check_ram_trigger()
-        
-        # Enable clock
-        dut.FrameController.set_fsm_bypass()
-        
-        while(True):
-            if dut.check_ram_trigger():
-                
-                dut.read_master_fifo_data(packet)
-                
-                data_plotter.update_plot()
 
 
-        # # =============================================================================
-        # # Image capture loop
-        # # =============================================================================
-        # for i in range(captures):
+        # =============================================================================
+        # Image capture loop
+        # =============================================================================
+        for i in range(captures):
             
-        #     # Run capture
-        #     dut.FrameController.run_capture()
+            # Run capture
+            dut.FrameController.run_capture()
             
-        #     # Check counts after capture
-        #     if verbose:
-        #         print("Packets after to capture " + str(i) + ":")
-        #         dut.check_fifo_data_counts()
+            # Check counts after capture
+            if verbose:
+                print("Packets after to capture " + str(i) + ":")
+                dut.check_fifo_data_counts()
                 
-        #     dut.read_master_fifo_data(packet)
+            dut.read_master_fifo_data(packet)
             
-        #     # Check counts before capture
-        #     if verbose:
-        #         print("Packets after read " + str(i) + ":")
-        #         dut.check_fifo_data_counts() 
+            # Check counts before capture
+            if verbose:
+                print("Packets after read " + str(i) + ":")
+                dut.check_fifo_data_counts() 
 
  
-        #     # Update the plot
-        #     if plotting:
-        #         data_plotter.update_plot() 
+            # Update the plot
+            if plotting:
+                data_plotter.update_plot() 
                 
     
     # =============================================================================
