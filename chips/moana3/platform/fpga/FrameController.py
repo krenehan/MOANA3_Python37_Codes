@@ -29,7 +29,7 @@ class FrameController:
     __capture_start = False
     __capture_interrupt = False
     __data_stream = False
-    __blitz_mode = True
+    __blitz_mode = False
     
     # Frame data settings
     __packets_per_transfer = 0
@@ -824,5 +824,7 @@ class FrameController:
             return "Frame controller state is STREAM_RESUME"
         elif s == self.__STATE_BLITZ:
             return "Frame controller state is BLITZ"
+        else:
+            return "Frame controller state is unknown"
             
         

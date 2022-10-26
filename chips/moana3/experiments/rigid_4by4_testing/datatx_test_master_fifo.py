@@ -212,6 +212,15 @@ try:
         # Read the FIFOs
         dut.read_master_fifo_data(packet)
         
+        # Work directly with receive array, reshape to correct size
+        receive_array = np.reshape(packet.receive_array, (number_of_frames, patt_per_frame, number_of_chips, 150))
+        
+        # Transpose so that chip axis comes first
+        receive_array = np.transpose(receive_array, axes=(2,0,1,3))
+        
+        # Flip along chip axis (would normally be every axis, but data is all the same past chip axis)
+        receive_array = np.flip(receive_array, axis=(0,))
+        
         # Work directly with receive array
         receive_array = np.flip(np.reshape(packet.receive_array, (number_of_chips, number_of_frames*patt_per_frame*150)), axis=0)
 
