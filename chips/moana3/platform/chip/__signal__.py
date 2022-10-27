@@ -7,6 +7,8 @@
 # Software In Signals
 SIGNAL_SCAN_RST =               0x0001
 SIGNAL_CELL_RST =               0x0002
+SIGNAL_DYNAMIC_MODE =           0x0004
+SIGNAL_DYNAMIC_PATTERN_PIPE_IN_COMPLETE = 0x0008
 
 # Software In Power Signals
 SIGNAL_HVDD_LDO_ENABLE =        0x0001
