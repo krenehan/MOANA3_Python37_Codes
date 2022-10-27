@@ -42,13 +42,6 @@ print("Integration time is " + str(integration_time) + " ms")
 
 
 # =============================================================================
-# Create an emitter pattern
-# =============================================================================
-pattern_pipe =  np.zeros((patt_per_frame, number_of_chips), dtype=bool)
-# pattern_pipe[0][0] = True
-
-
-# =============================================================================
 # Top-level options
 # =============================================================================
 
@@ -289,8 +282,7 @@ for time_gate_value in time_gate_list:
         # Send information to frame controller prior to capture
         # =============================================================================
         # Update FSM settings
-        dut.FrameController.send_frame_data( pattern_pipe,      \
-                                            number_of_chips, \
+        dut.FrameController.send_frame_data( number_of_chips, \
                                             number_of_frames,   \
                                             patt_per_frame,     \
                                             meas_per_patt, \

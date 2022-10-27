@@ -42,13 +42,6 @@ print("Integration time is " + str(integration_time) + " ms")
 
 
 # =============================================================================
-# Create an emitter pattern
-# =============================================================================
-pattern_pipe =  np.zeros((patt_per_frame, number_of_chips), dtype=bool)
-# pattern_pipe[0][0] = True
-
-
-# =============================================================================
 # Top-level options
 # =============================================================================
 
@@ -289,8 +282,7 @@ for time_gate_value in time_gate_list:
         # Send information to frame controller prior to capture
         # =============================================================================
         # Update FSM settings
-        dut.FrameController.send_frame_data( pattern_pipe,      \
-                                            number_of_chips, \
+        dut.FrameController.send_frame_data( number_of_chips, \
                                             number_of_frames,   \
                                             patt_per_frame,     \
                                             meas_per_patt, \
@@ -307,22 +299,31 @@ for time_gate_value in time_gate_list:
         # =============================================================================
         # Image capture loop
         # =============================================================================
-        # Read artificial trigger
-        dut.check_ram_trigger()
+        print("Streaming histograms")
+        
+        # Clear artificial triggers
         dut.check_read_trigger()
         
         # Start stream
-        dut.FrameController.begin_stream()        
+        dut.FrameController.begin_stream()  
         
-        while(True):
+        for c in range(number_of_captures):
             
             if dut.check_read_trigger():
                 
+                # Acknowledge the read trigger
                 dut.acknowledge_read_trigger()
                 
+                # Read data
                 dut.read_master_fifo_data(packet)
+            
+                # Save
+                if logging:
+                    np.save(os.path.join(experiment_dir, "capture_" + str(c) + ".npy"), packet.data)
                 
-                data_plotter.update_plot()
+                # Update the plot
+                if plotting:
+                    data_plotter.update_plot()
                 
     
     # =============================================================================

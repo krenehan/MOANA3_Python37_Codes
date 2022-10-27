@@ -50,13 +50,6 @@ print("Integration time is " + str(integration_time) + " ms")
 
 
 # =============================================================================
-# Create an emitter pattern
-# =============================================================================
-pattern_pipe =  np.zeros((patt_per_frame, number_of_chips), dtype=bool)
-# pattern_pipe[0][0] = True
-
-
-# =============================================================================
 # Top-level options
 # =============================================================================
 
@@ -297,8 +290,7 @@ for time_gate_value in time_gate_list:
         # Send information to frame controller prior to capture
         # =============================================================================
         # Update FSM settings
-        dut.FrameController.send_frame_data( pattern_pipe,      \
-                                            number_of_chips, \
+        dut.FrameController.send_frame_data( number_of_chips, \
                                             number_of_frames,   \
                                             patt_per_frame,     \
                                             meas_per_patt, \
@@ -315,33 +307,45 @@ for time_gate_value in time_gate_list:
         # =============================================================================
         # Image capture loop
         # =============================================================================
-        # Read artificial trigger
-        dut.check_ram_trigger()
         
-        # Enable clock
-        dut.FrameController.set_fsm_bypass()
+        print("Blitzing histograms")
         
-        missed = 0
-        hit = 0
+        # Initialize capture count
+        c = 0
         
-        while(True):
-            # time.sleep(110e-3)
+        # Start blitz
+        dut.FrameController.begin_blitz()
+        
+        # Begin blitz
+        while True:
+            
             if dut.check_ram_trigger():
                 
+                # Increment capture count
+                c = c + 1
+                
+                # Read data
                 dut.read_master_fifo_data(packet)
+            
+                # Save
+                if logging:
+                    np.save(os.path.join(experiment_dir, "capture_" + str(c) + ".npy"), packet.data)
                 
-                data_plotter.update_plot()
-                
-                hit = hit + 1
-                
-            else:
-                missed = missed + 1
+                # Update the plot
+                if plotting:
+                    data_plotter.update_plot()
+                    
+                # Check
+                if c == number_of_captures - 1:
+                    break
                 
     
     # =============================================================================
     # Disable supplies, close plots, log files, and FPGA on exit
     # =============================================================================
     finally:
+        dut.FrameController.end_blitz()
+        print("Finished blitzing histograms")
         dut.disable_hvdd_ldo_supply()
         dut.disable_cath_sm_supply()
         print("Closing FPGA")

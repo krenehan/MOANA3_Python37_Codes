@@ -34,19 +34,11 @@ patt_per_frame                      = 1
 number_of_frames                    = 1
 tx_refclk_freq                      = 12.5e6
 pad_captured_mask                   = 0b1111111111111111
-clk_flip                            = True
 subtractor_offset                   = 0
 
 # Report integration time
 integration_time = round(meas_per_patt * 1/clk_freq * patt_per_frame * number_of_frames * 1000, 1)
 print("Integration time is " + str(integration_time) + " ms")
-
-
-# =============================================================================
-# Create an emitter pattern
-# =============================================================================
-pattern_pipe =  np.zeros((patt_per_frame, number_of_chips), dtype=bool)
-# pattern_pipe[0][0] = True
 
 
 # =============================================================================
@@ -407,8 +399,7 @@ for time_gate_value in time_gate_list:
         # Send information to frame controller prior to capture
         # =============================================================================
         # Update FSM settings
-        dut.FrameController.send_frame_data( pattern_pipe,      \
-                                            number_of_chips, \
+        dut.FrameController.send_frame_data( number_of_chips, \
                                             number_of_frames,   \
                                             patt_per_frame,     \
                                             meas_per_patt,

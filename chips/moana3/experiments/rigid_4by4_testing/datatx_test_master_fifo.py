@@ -195,9 +195,7 @@ try:
             time.sleep(config_wait)
         
         # Update FSM settings
-        pattern_pipe = np.zeros((patt_per_frame, number_of_chips), dtype=int)
-        dut.FrameController.send_frame_data( pattern_pipe,      \
-                                            number_of_chips, \
+        dut.FrameController.send_frame_data( number_of_chips, \
                                             number_of_frames,   \
                                             patt_per_frame,     \
                                             meas_per_patt,

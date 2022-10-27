@@ -37,7 +37,6 @@ patt_per_frame                      = 2
 number_of_frames                    = 1
 tx_refclk_freq                      = 12.5e6
 pad_captured_mask                   = 0b1111111111111111
-clk_flip                            = True
 subtractor_offset                   = 0
 
 # Report integration time
@@ -403,8 +402,7 @@ for time_gate_value in time_gate_list:
         # Send information to frame controller prior to capture
         # =============================================================================
         # Update FSM settings
-        dut.FrameController.send_frame_data( np.zeros((patt_per_frame, number_of_chips), dtype=bool),      \
-                                            number_of_chips, \
+        dut.FrameController.send_frame_data( number_of_chips, \
                                             number_of_frames,   \
                                             patt_per_frame,     \
                                             meas_per_patt,
