@@ -765,6 +765,21 @@ class TestPlatform:
         
         # Send the trigger signal
         self.fpga_interface.xem.ActivateTriggerIn(addr.ADDR_TRIGGERINDELAY, sig.TRIGGER_DELAYTRIGGER)
+        
+        
+    # ====================================================
+    # Activate the dynamic features of MOANA3
+    # ====================================================
+    def activate_dynamic_mode(self, dynamic_packet_obj):
+        
+        # Set dynamic mode bit high
+        self.tiehi_signal('dynamic_mode')
+        
+        # Pipe in dynamic packet
+        self.fpga_interface.pipe_in_pattern(addr.ADDR_PIPE_IN_PATTERN, dynamic_packet_obj.create_pipe_in())
+        
+        # Indicate dynamic pipe in is done
+        self.tiehi_signal('dynamic_pattern_pipe_in_complete')
        
         
         
