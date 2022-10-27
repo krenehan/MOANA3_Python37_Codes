@@ -52,7 +52,6 @@ class TestPlatform:
         self.FrameController = FrameController()
         
 
-
     # ====================================================
     # Set the packet length 
     # ====================================================
@@ -77,15 +76,12 @@ class TestPlatform:
         # Pass FPGA interface object to frame controller
         self.FrameController.set_fpga_interface(self.fpga_interface)
         
-        # TODO: Architect method for refclk and tx_refclk frequency selection
+        # TxRefClk frequency is fixed
         tx_refclk_freq = 12.5e6
         
         # Pass clock frequency to FrameController
         self.FrameController.period = round(1/refclk_freq*1e9, 1)
         self.FrameController.txperiod = round(1/tx_refclk_freq*1e9, 1)
-        
-        # Pass clock frequency to DelayLine
-        # self.DelayLine.set_clk_period(round(1/refclk_freq*1e9, 1))
 
         # Load bit file to FPGA
         if bitfile_path == '':
@@ -434,16 +430,6 @@ class TestPlatform:
         print("Tie Lo 1: %d" % ( (wire_out & sig.SIGNAL_TIE_LO_0_) >> sig.TIE_LO_0_INDEX ))
         print("Tie Lo 2: %d" % ( (wire_out & sig.SIGNAL_TIE_LO_1_) >> sig.TIE_LO_1_INDEX ))
         
-    
-    # ====================================================
-    # Wire out lowest 32 bits of emitter pattern from register bank
-    # ====================================================
-    def check_emitter_pattern(self):
-        msb = self.fpga_interface.wire_out(addr.ADDR_WIRE_OUT_REGBANK_MSB)
-        lsb = self.fpga_interface.wire_out(addr.ADDR_WIRE_OUT_REGBANK_LSB)
-        print("Register bank MSB: " + binary_repr(msb, 16))
-        print("Register bank LSB: " + binary_repr(lsb, 16))
-        
         
         
 #---------------- Power supply convenience functions -----------------
@@ -556,215 +542,6 @@ class TestPlatform:
     def set_clock_level_shifter_for_clock_output(self):
         self.tiehi_power_signal('clock_ls_direction')
         print("Clock level shifter set for clock output")
-        
-        
-#------------ FIFO checks ---------------------   
-
-    # ====================================================
-    # Check the status of the RWC
-    # ====================================================
-    def check_rwc_state(self):
-        
-        # Update wires
-        out = self.fpga_interface.wire_out(0x29)
-        
-        # Get state and case
-        state = out & (0b111<<0)
-        if (state == 1):
-            current_state = 'idle'
-        elif (state == 2):
-            current_state = 's_write1'
-        elif (state == 3):
-            current_state = 's_write2'
-        elif (state == 4):
-            current_state = 's_write3'
-        elif (state == 5):
-            current_state = 's_write4'
-        elif (state == 6):
-            current_state = 's_cont'
-        else:
-            current_state = 'unknown: ' + str(state)
-        
-        # Print
-        print("RWC State: " + current_state)
-        
-    def set_no_mode(self):
-        self.fpga_interface.wire_in(0x09, 0)
-        
-        
-    def set_read_mode(self):
-        self.fpga_interface.wire_in(0x09, 1)
-        
-    def set_write_mode(self):
-        self.fpga_interface.wire_in(0x09, 1<<1)
-        
-    def set_pipe_activate(self):
-        self.fpga_interface.wire_in(0x09, 1<<2)
-        
-    # ====================================================
-    # Check the status of the RRC
-    # ====================================================
-    def check_rrc_state(self):
-        
-        # Update wires
-        out = self.fpga_interface.wire_out(0x2A)
-        
-        
-        # Get state and case
-        state = out & (0b111<<0)
-        if (state == 0):
-            current_state = 'idle'
-        elif (state == 1):
-            current_state = 's_read1'
-        elif (state == 2):
-            current_state = 's_read2'
-        elif (state == 3):
-            current_state = 's_read3'
-        elif (state == 4):
-            current_state = 's_read4'
-        elif (state == 5):
-            current_state = 's_read5'
-        elif (state == 6):
-            current_state = 's_read6'
-        elif (state == 7):
-            current_state = 's_cont'
-        else:
-            current_state = 'unknown'
-        
-        # Print
-        print("RRC State: " + current_state)
-        
-    # ====================================================
-    # Check the ram write FIFO status
-    # ====================================================
-    def check_ram_write_fifo_status(self):
-        
-        # Update wires
-        out = self.fpga_interface.wire_out(0x2B)
-        
-        # Full and empty
-        if (out & 1<<0):
-            print("Ram write FIFO empty")
-        if (out & 1<<1):
-            print("Ram write FIFO full")
-            
-        # Write data count
-        count = (out & (0b11111111111111<<2)) >> 2
-        print("RAM write FIFO write data count is " + str(count))
-        
-    # ====================================================
-    # Check the ram read FIFO status
-    # ====================================================
-    def check_ram_read_fifo_status(self):
-        
-        # Update wires
-        out = self.fpga_interface.wire_out(0x2C)
-        
-        # Object count
-        count = out & (0b11111111111<<0)
-        print("Ram read FIFO holding " + str(count) + " objects")
-        
-        # Full and empty
-        if (out & 1<<11):
-            print("Ram read FIFO empty")
-        if (out & 1<<12):
-            print("Ram read FIFO full")
-            
-            
-    # ====================================================
-    # Check the number of packets written into RAM
-    # ====================================================
-    def check_packet_count_in_ram(self):
-        
-        # Update wires
-        out = self.fpga_interface.wire_out(0x2D)
-        
-        # Object count
-        count = out & (0b11111111<<0)
-        print( str(count) + " packets in RAM")
-        return count
-            
-
-    # ====================================================
-    # Check the status of the FIFOs
-    # ====================================================
-    def check_fifo_status(self, first_target=0, second_target=1, verbose=False):
-        out = self.fpga_interface.wire_out(addr.ADDR_WIRE_OUT_FIFO_STATUS)
-        #print "WireOut: %s" % bin(out)
-        flags = 0
-        # First target
-        if (out & sig.SIGNAL_FIFO_00_FULL):
-            print("Chip " + str(first_target) + " 1->8 FIFO full; "),
-            flags = flags + 1
-        if (out & sig.SIGNAL_FIFO_01_FULL):
-            print("Chip " + str(first_target) + " 32->16 FIFO full; "),
-            flags = flags + 1
-        if (out & sig.SIGNAL_FIFO_00_OVERFLOW):
-            print("Chip " + str(first_target) + " 1->8 FIFO overflow; "),
-            flags = flags + 1
-        if (out & sig.SIGNAL_FIFO_01_OVERFLOW):
-            print("Chip " + str(first_target) + " 32->16 FIFO overflow; "),
-            flags = flags + 1
-        if (out & sig.SIGNAL_FIFO_00_EMPTY):
-            if verbose:
-                print("Chip " + str(first_target) + " 1->8 FIFO empty; "),
-        if (out & sig.SIGNAL_FIFO_01_EMPTY):
-            print("Chip " + str(first_target) + " 32->16 FIFO empty; "),
-            flags = flags + 1
-        if (out & sig.SIGNAL_FIFO_00_UNDERFLOW):
-            if verbose:
-                print("Chip " + str(first_target) + " 1->8 FIFO underflow; "),
-        if (out & sig.SIGNAL_FIFO_01_UNDERFLOW):
-            print("Chip " + str(first_target) + " 32->16 FIFO underflow; "),
-            flags = flags + 1
-            
-        # Second target
-        if (out & sig.SIGNAL_FIFO_10_FULL):
-            print("Chip " + str(second_target) + " 1->8 FIFO full; "),
-            flags = flags + 1
-        if (out & sig.SIGNAL_FIFO_11_FULL):
-            print("Chip " + str(second_target) + " 32->16 FIFO full; "),
-            flags = flags + 1
-        if (out & sig.SIGNAL_FIFO_10_OVERFLOW):
-            print("Chip " + str(second_target) + " 1->8 FIFO overflow; "),
-            flags = flags + 1
-        if (out & sig.SIGNAL_FIFO_11_OVERFLOW):
-            print("Chip " + str(second_target) + " 32->16 FIFO overflow; "),
-            flags = flags + 1
-        if (out & sig.SIGNAL_FIFO_10_EMPTY):
-            if verbose:
-                print("Chip " + str(second_target) + " 1->8 FIFO empty; "),
-        if (out & sig.SIGNAL_FIFO_11_EMPTY):
-            print("Chip " + str(second_target) + " 32->16 FIFO empty; "),
-            flags = flags + 1
-        if (out & sig.SIGNAL_FIFO_10_UNDERFLOW):
-            if verbose:
-                print("Chip " + str(second_target) + " 1->8 FIFO underflow; "),
-        if (out & sig.SIGNAL_FIFO_11_UNDERFLOW):
-            print("Chip " + str(second_target) + " 32->16 FIFO underflow; "),
-            flags = flags + 1
-        
-        if flags > 0:
-            print("")
-        else:
-            if verbose:
-                print("FIFOs OK")
-                
-                
-    def check_fifo_data_counts(self):
-        c0_out = self.fpga_interface.wire_out(addr.ADDR_WIRE_OUT_FIFO_01_COUNT) #& 0x1FFF
-        c1_out = self.fpga_interface.wire_out(addr.ADDR_WIRE_OUT_FIFO_11_COUNT) #& 0x1FFF
-        print("Chip 0: " + str(c0_out) + " packets")
-        print("Chip 1: " + str(c1_out) + " packets")
-        
-        
-    # ====================================================
-    # Check the status of the FIFOs
-    # ====================================================
-    def trigger_delay_change(self):
-        
-        # Send the trigger signal
-        self.fpga_interface.xem.ActivateTriggerIn(addr.ADDR_TRIGGERINDELAY, sig.TRIGGER_DELAYTRIGGER)
         
         
     # ====================================================
