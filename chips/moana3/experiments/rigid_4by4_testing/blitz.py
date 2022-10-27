@@ -16,22 +16,24 @@ number_of_chips = 16
 # VCSEL bias setting
 clk_freq                            = 50e6
 vcsel_bias                          = 1.4
-vcsel_setting                       = 2
+vcsel_setting                       = 4
 
 # List of time gating values to iterate through
-time_gate_list = [0, ]
+time_gate_list = [0.0, ]
 
 
 # Test conditions to propagate to log file
 conditions = 'dummy'
 
+dynamic_mode = True
+
 # =============================================================================
 # Test settings
 # Integration time = meas_per_patt * 1/clk_freq * patt_per_frame * number_of_frames
 # =============================================================================
-meas_per_patt                       = 500000
-patt_per_frame                      = 1
-number_of_frames                    = 50
+meas_per_patt                       = 300000
+patt_per_frame                      = 16
+number_of_frames                    = 1
 tx_refclk_freq                      = 12.5e6
 pad_captured_mask                   = 0b1111111111111111
 clk_flip                            = True
@@ -78,7 +80,7 @@ vcsel_enable_through_scan = False
 # Plotting options
 # =============================================================================
 # Fast mode overrides all othe plot settings and optimizes processing for fast collection of data
-fast_mode = False  
+fast_mode = True  
 
 # Raw plotting shows bins instead of time on the x-axis
 raw_plotting = True
@@ -93,8 +95,8 @@ log_plots = False
 show_plot_info = False
 
 # Enabling this fixes the y-axis at a max value
-fix_y_max = False
-y_max_value = 500
+fix_y_max = True
+y_max_value = 600000
 
     
 # =============================================================================
@@ -230,7 +232,7 @@ for time_gate_value in time_gate_list:
     if plotting:
         
         # Instantiate the MultipleDataPlotter
-        data_plotter = MultipleDataPlotter.MultipleDataPlotter( packet, time_limits=[0,period*3/4], number_of_chips_to_plot=None)
+        data_plotter = MultipleDataPlotter.MultipleDataPlotter( packet, time_limits=[0,period*3/4], number_of_chips_to_plot=2)
         data_plotter_created = True
         
         # Setup
@@ -337,7 +339,7 @@ for time_gate_value in time_gate_list:
             scan_bits[i].AQCDLLCoarseWord      = np.binary_repr(coarse, 4)
             scan_bits[i].AQCDLLFineWord        = np.binary_repr(fine, 3)
             scan_bits[i].AQCDLLFinestWord      = np.binary_repr(finest, 1)
-            scan_bits[i].DriverDLLWord         = np.binary_repr(4, 5)
+            scan_bits[i].DriverDLLWord         = np.binary_repr(vcsel_setting, 5)
             scan_bits[i].ClkFlip               = np.binary_repr(clk_flip,1)
             scan_bits[i].ClkBypass             = '0'
             
@@ -346,9 +348,9 @@ for time_gate_value in time_gate_list:
             scan_bits[i].PattResetExtEnable    = '0'
                 
             # Configure VCSELs
-            scan_bits[i].VCSELWave1Enable         = '1'    
-            scan_bits[i].VCSELEnableWithScan        = '1'     
-            scan_bits[i].VCSELEnableControlledByScan        = '1' 
+            scan_bits[i].VCSELWave1Enable         = '0'    
+            scan_bits[i].VCSELEnableWithScan        = '0'     
+            scan_bits[i].VCSELEnableControlledByScan        = '0' 
             scan_bits[i].VCSELWave2Enable         = '0'
             
             # Configure TxData
@@ -361,7 +363,7 @@ for time_gate_value in time_gate_list:
             scan_bits[i].SubtractorBypass      = '0'
             
             # Dynamic operation
-            scan_bits[i].DynamicConfigEnable = '0'
+            scan_bits[i].DynamicConfigEnable = '1' if dynamic_mode else '0'
             
             # Configure SPADs
             scan_bits[i].SPADEnable            = '1'*64
@@ -413,6 +415,31 @@ for time_gate_value in time_gate_list:
                                             patt_per_frame,     \
                                             meas_per_patt,
                                             pad_captured_mask )
+            
+        # =============================================================================
+        # Create an emitter pattern
+        # =============================================================================
+        if dynamic_mode:
+            dynamic_packet = DynamicPacket.DynamicPacket(number_of_chips, patt_per_frame)
+            
+            # These settings are maintained through all patterns
+            dynamic_packet.fill(field_dict={    'nir_vcsel_enable': '1', \
+                                                'driver_dll_word': np.binary_repr(vcsel_setting, 5), \
+                                                'clk_flip': np.binary_repr(clk_flip,1), \
+                                                'aqc_dll_coarse_word': np.binary_repr(coarse, 4), \
+                                                'aqc_dll_fine_word': np.binary_repr(fine, 3), \
+                                                'aqc_dll_finest_word': np.binary_repr(finest, 1), \
+                                                })
+                
+            # # Sweep emitter
+            for p in range(patt_per_frame):
+                dynamic_packet.fill(pattern_list=[p], chip_list=[p], field_dict={'vcsel_enable': '1'})
+            
+            # Show results
+            dynamic_packet.show()
+            
+            # Activate dynamic mode
+            dut.activate_dynamic_mode(dynamic_packet)
 
         
         # =============================================================================
@@ -461,6 +488,7 @@ for time_gate_value in time_gate_list:
     # Disable supplies, close plots, log files, and FPGA on exit
     # =============================================================================
     finally:
+        dut.FrameController.end_blitz()
         print("Finished blitzing histograms")
         dut.disable_hvdd_ldo_supply()
         dut.disable_cath_sm_supply()
