@@ -361,9 +361,6 @@ class FrameController:
         # Update the pad_captured mask
         self.__update_pad_captured_mask(pad_captured_mask)
         
-        # Get the FIFO size
-        self.__get_fifo_size()
-        
         # Calculate the wait time
         self.__capture_wait_time = self.period * 1e-9 * measurements_per_pattern * patterns_per_frame * number_of_frames
         
