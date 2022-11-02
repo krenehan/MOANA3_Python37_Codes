@@ -75,13 +75,13 @@ class MultipleDataPlotter:
     __packet = None
     
     # Pattern colors
-    __colors = ('blue', 'orange', 'green', 'yellow', 'silver', 'plum', 'crimson', 'brown', 'pink', 'cyan', 'maroon', 'khaki', 'chartreuse', 'coral', 'indigo', 'navy')
+    __colors = ('blue', 'orange', 'green', 'yellow', 'silver', 'plum', 'crimson', 'brown', 'pink', 'cyan', 'maroon', 'khaki', 'chartreuse', 'coral', 'indigo', 'navy', 'blue', 'orange', 'green', 'yellow', 'silver', 'plum', 'crimson', 'brown', 'pink', 'cyan', 'maroon', 'khaki', 'chartreuse', 'coral', 'indigo', 'navy')
     
 
     # ===========================================================
     # Constructor
     # ===========================================================
-    def __init__(self, packet, time_limits=[-1, -1], number_of_chips_to_plot=None):
+    def __init__(self, packet, time_limits=[-1, -1], number_of_chips_to_plot=None, patterns_to_plot=None):
         
         # Store packet handle
         self.__packet = packet
@@ -89,7 +89,6 @@ class MultipleDataPlotter:
         # Initialize parameters
         self.__number_of_chips                  = self.__packet.number_of_chips
         self.__meas_per_patt                    = self.__packet.measurements_per_pattern
-        self.__patterns_per_frame               = self.__packet.patterns_per_frame
         self.__number_of_frames                 = self.__packet.number_of_frames
         self.__period                           = self.__packet.period
         self.__bins_per_histogram               = self.__packet.bins_per_histogram
@@ -99,6 +98,11 @@ class MultipleDataPlotter:
             self.__number_of_chips_to_plot      = self.__number_of_chips 
         else:
             self.__number_of_chips_to_plot      = number_of_chips_to_plot
+            
+        if patterns_to_plot is None:
+            self.__patterns_per_frame           = self.__packet.patterns_per_frame
+        else:
+            self.__patterns_per_frame             = patterns_to_plot
         
         # Time limits for plotting
         if time_limits == [-1, -1]:
