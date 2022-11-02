@@ -291,11 +291,8 @@ class Ui_PlotWindow(object):
     def __configure_dut(self):
         
         # Program the FPGA
-        self.__dut.init_fpga(self.__bitfile_path, refclk_freq = self.__test_setup.clock_frequency, tx_refclk_freq = self.__test_setup.clock_frequency/8, init_pll=True)
-    
-        # Print the serial number of the device
-        serial_number = self.__dut.fpga_interface.xem.GetSerialNumber()
-        print("Serial Number: " + serial_number)
+        self.__dut.init_fpga(self.__bitfile_path)
+        dut.fpga_interface.xem.ResetFPGA()
         
         
     #################################################
@@ -304,7 +301,8 @@ class Ui_PlotWindow(object):
     def __reconfigure_dut(self):
         
         # Reconfigure the clocks on the FPGA
-        self.__dut.fpga_interface.initPLL(self.__test_setup.clock_frequency, tx_refclk_freq = self.__test_setup.clock_frequency/8)
+        self.__dut.init_fpga(self.__bitfile_path)
+        dut.fpga_interface.xem.ResetFPGA()
   
         
     #################################################
@@ -337,9 +335,7 @@ class Ui_PlotWindow(object):
         
         # Enable supplies
         self.__dut.enable_hvdd_ldo_supply()
-        self.__dut.enable_vrst_ldo_supply()
         self.__dut.enable_cath_sm_supply()
-        self.__dut.enable_vcsel_cath_sm_supply()
         sleep(0.1)
         print("Power on done!")
         
@@ -432,12 +428,11 @@ class Ui_PlotWindow(object):
     ################################################# 
     def __configure_frame_controller(self):
         
-        self.__dut.DelayLine.set_clk_flip(True)
-        self.__bypass, self.__coarse, self.__fine = self.__dut.DelayLine.set_delay_line(self.__test_setup.delay)
+        dut.DelayLine.specify_clock(self.__test_setup.period,0.5) 
+        self.__clk_flip, self.__bypass, self.__coarse, self.__fine = self.__dut.DelayLine.get_setting(self.__test_setup.delay)
         
         print("Configuring frame controller...")
-        self.__dut.FrameController.send_frame_data( self.__emitter_pattern.emitter_pattern, \
-                                            self.__test_setup.number_of_chips, \
+        self.__dut.FrameController.send_frame_data( self.__test_setup.number_of_chips, \
                                             self.__test_setup.number_of_frames, \
                                             self.__test_setup.patterns_per_frame, \
                                             self.__test_setup.measurements_per_pattern )
