@@ -8,7 +8,7 @@ from copy import deepcopy
 # =============================================================================
 
 # Number of captures per time gating setting
-captures = 1000
+number_of_captures = 1000
 
 # Number of chips
 number_of_chips = 16
@@ -16,43 +16,31 @@ number_of_chips = 16
 # VCSEL bias setting
 clk_freq                            = 50e6
 vcsel_bias                          = 1.4
-vcsel_setting                       = 2
+vcsel_setting                       = 4
 
 # List of time gating values to iterate through
-time_gate_list = [0, ]
+time_gate_list = [0.0, ]
 
 
 # Test conditions to propagate to log file
 conditions = 'dummy'
 
-# Use to keep track of time
-time_init = 0.0
-time_recorded = False
-
+dynamic_mode = True
 
 # =============================================================================
 # Test settings
 # Integration time = meas_per_patt * 1/clk_freq * patt_per_frame * number_of_frames
 # =============================================================================
-meas_per_patt                       = 500000
-patt_per_frame                      = 1
+meas_per_patt                       = 300000
+patt_per_frame                      = 16
 number_of_frames                    = 1
 tx_refclk_freq                      = 12.5e6
 pad_captured_mask                   = 0b1111111111111111
-clk_flip                            = True
-spad_voltage                        = 25
-vrst_voltage                        = 3.3
+subtractor_offset                   = 0
 
 # Report integration time
 integration_time = round(meas_per_patt * 1/clk_freq * patt_per_frame * number_of_frames * 1000, 1)
 print("Integration time is " + str(integration_time) + " ms")
-
-
-# =============================================================================
-# Create an emitter pattern
-# =============================================================================
-pattern_pipe =  np.zeros((patt_per_frame, number_of_chips), dtype=bool)
-# pattern_pipe[0][0] = True
 
 
 # =============================================================================
@@ -84,7 +72,7 @@ vcsel_enable_through_scan = False
 # Plotting options
 # =============================================================================
 # Fast mode overrides all othe plot settings and optimizes processing for fast collection of data
-fast_mode = False  
+fast_mode = True  
 
 # Raw plotting shows bins instead of time on the x-axis
 raw_plotting = True
@@ -99,8 +87,8 @@ log_plots = False
 show_plot_info = False
 
 # Enabling this fixes the y-axis at a max value
-fix_y_max = False
-y_max_value = 500
+fix_y_max = True
+y_max_value = 600000
 
     
 # =============================================================================
@@ -124,35 +112,83 @@ for time_gate_value in time_gate_list:
     # Logging Setup
     # =============================================================================
     if logging:
-        # Grab the current date and time
-        date_time=str(datetime.datetime.now())
         
         # Create the results directory
-        results_dir = '../../data/flex_pulseox/'
+        results_dir = '../../data/sample/data/'
         if not os.path.exists(results_dir):
             os.makedirs(results_dir)
+                        
+        # Get the date and time for logging directory creation
+        date_time=str(datetime.datetime.now())
         
-        # Create log_file_name
-        log_file_name = "%s_%s-%s-%s.csv" % (full_conditions, date_time[0:10], date_time[11:13], date_time[14:16])
+        # Build the experiment directory name (conditions_year-month-day_hour-minute-second)
+        experiment_directory_name = \
+                        conditions + "_" + \
+                        date_time[0:10] + "_" + \
+                        date_time[11:13]+ "-" + \
+                        date_time[14:16]+ "-" + \
+                        date_time[17:19]
+        
+        # Create directory
+        experiment_directory = os.path.join(results_dir, experiment_directory_name)
+        os.mkdir(experiment_directory)
+        
+        # Check that logging directory was created
+        if not os.path.exists(experiment_directory):
+            raise Exception("Experiment directory " + experiment_directory + " was not created successfully")
+            
+        # Save a yeild file
+        s = "detectors=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15\nsources=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15"
+        y_file = open(os.path.join(experiment_directory, "yield.txt"), 'w')
+        y_file.write(str(s))
+        y_file.close()
+        
+        # Save emitter pattern
+        np.save(os.path.join(experiment_directory, "emitter_pattern.npy"), emitter_pattern, fix_imports=False)
+        
+        # Save ir emitters
+        np.save(os.path.join(experiment_directory, "ir_emitters.npy"), ir_emitters, fix_imports=False)
         
         # File header
-        header =       'Time (s)' + ','+ 'Delay'+','
-        for i in range(number_of_chips):
-            header = header + 'FIFO ' + str(i) + ' Data' + ','
-        header = header + \
-                               'Clock Frequency'            + ',' + \
-                               'Number of Frames'           + ',' + \
-                               'Patterns per Frame'         + ',' + \
-                               'Measurements per Pattern'   + ',' + \
-                               'Subtractor Value'           + ',' + \
-                               'ClkFlip'                    + ',' + \
-                               'Driver Setting'             + ',' + \
-                               'SPAD Voltage'               + ',' + \
-                               'VRST Voltage'               + ',' + \
-                               'VCSEL Bias'                 + ',' + \
-                               'Pattern Pipe'               + '\n'
-        log_file = open(results_dir + log_file_name, 'w')
-        log_file.write(header)
+        s = \
+            "Conditions: " + str(conditions) + "\n" \
+            "Number of Chips: " + str(number_of_chips) + "\n" \
+            "Pad Captured Mask: " + str(pad_captured_mask) + "\n" \
+            "Number of Captures: " + str(number_of_captures) + "\n" \
+            "Clock Frequency: " + str(clk_freq) + "\n" \
+            "Period: " + str(period) + "\n" \
+            "Delay: " + str(0) + "\n" \
+            "VCSEL Setting: " + str(vcsel_setting) + "\n" \
+            "Time Gating Setting: " + str(0) + "\n" \
+            "Measurements per Pattern: " + str(meas_per_patt) + "\n" \
+            "Patterns per Frame: " + str(patt_per_frame) + "\n" \
+            "Number of Frames: " + str(number_of_frames) + "\n" \
+            "VCSEL Bias: " + str(vcsel_bias) + "\n" \
+            "Laser Wavelength: " + "" + "\n" \
+            "Laser Power: " + "" + "\n" \
+            "Laser Bandwidth: " + "" + "\n" \
+            "Fiber Type: " + "" + "\n" \
+            "Other Equipment: " + "" + "\n" \
+            "Participant Name: " + "" + "\n" \
+            "Test Type: " + "IRF" + "\n" \
+            "Test Geometry: " + "" + "\n" \
+            "Patch Location: " + "" + "\n" \
+            "Phantom Number: " + "" + "\n" \
+            "Solution Number: " + "" + "\n" \
+            "ROI Size: " + "" + "\n" \
+            "ROI ua: " + "" + "\n" \
+            "SPAD Voltage: " + str(spad_voltage) + "\n" \
+            "VRST Voltage: " + str(vrst_voltage) + "\n" \
+            "Subtractor Offset: " + str(0) + "\n" \
+            "Base Subtractor Value: " + str(subtractor_value) + "\n" \
+            "Subtractor Value: " + str(subtractor_value) + "\n" \
+            "Logging: " + str(logging) + "\n" + \
+            "Logging Directory: " + str(experiment_directory) + "\n"
+                
+        # Save test setup
+        ts_file = open(os.path.join(experiment_directory, "test_setup.txt"), 'w')
+        ts_file.write(str(s))
+        ts_file.close()
     
     
     # =============================================================================
@@ -167,7 +203,7 @@ for time_gate_value in time_gate_list:
     # =============================================================================
     # Test settings that are dynamically updated or stay constant
     # =============================================================================
-    subtractor_value                    = int(round((1/clk_freq) * 0.5 / 70e-12, 0)) -50
+    subtractor_value                    = int(round((1/clk_freq) * 0.5 / 65e-12, 0)) + subtractor_offset
     period                              = round(1/clk_freq*1e9, 1)
     number_of_bins                      = 150
     bin_size                            = 12
@@ -178,7 +214,7 @@ for time_gate_value in time_gate_list:
     # =============================================================================
     # Initialize the data packet
     # =============================================================================
-    packet = DataPacket.DataPacket(number_of_chips, number_of_frames, patt_per_frame, meas_per_patt, period, compute_mean=True)
+    packet = DataPacket.DataPacket(number_of_chips, number_of_frames, patt_per_frame, meas_per_patt, period, compute_mean=False)
 
     
     # =============================================================================
@@ -188,7 +224,7 @@ for time_gate_value in time_gate_list:
     if plotting:
         
         # Instantiate the MultipleDataPlotter
-        data_plotter = MultipleDataPlotter.MultipleDataPlotter( packet, time_limits=[0,period*3/4], number_of_chips_to_plot=None)
+        data_plotter = MultipleDataPlotter.MultipleDataPlotter( packet, time_limits=[0,period*3/4], number_of_chips_to_plot=2)
         data_plotter_created = True
         
         # Setup
@@ -218,20 +254,9 @@ for time_gate_value in time_gate_list:
     print("Serial Number: " + serial_number)
 
     # # Setup the delay line
-    # dut.DelayLine.set_clk_flip(clk_flip)
     dut.DelayLine.specify_clock(period,duty_cycle) 
     clk_flip, coarse, fine, finest, actual_delay_ns = dut.DelayLine.get_setting(requested_delay)
     
-    # time_gating_delay = dut.DelayLine.get_delay(coarse, fine)
-    # bypass, coarse, fine = 0, 0, 0
-    # time_gating_delay=0
-    
-    # if plotting:
-        
-        # Propagate settings to MultipleDataPlotter
-        # data_plotter.set_coarse_fine([coarse]*number_of_chips, [fine]*number_of_chips)
-        # data_plotter.set_gate_delay([time_gating_delay]*number_of_chips)
-    # 
     
     # =============================================================================
     # Begin scan and capture
@@ -257,7 +282,6 @@ for time_gate_value in time_gate_list:
         # Power-up chip and reset
         # =============================================================================
         print("Powering on...")
-        # dut.enable_vdd_sm_supply()
         dut.enable_hvdd_ldo_supply()
         dut.enable_cath_sm_supply()
         time.sleep(ldo_wait)
@@ -307,25 +331,18 @@ for time_gate_value in time_gate_list:
             scan_bits[i].AQCDLLCoarseWord      = np.binary_repr(coarse, 4)
             scan_bits[i].AQCDLLFineWord        = np.binary_repr(fine, 3)
             scan_bits[i].AQCDLLFinestWord      = np.binary_repr(finest, 1)
-            scan_bits[i].DriverDLLWord         = np.binary_repr(4, 5)
+            scan_bits[i].DriverDLLWord         = np.binary_repr(vcsel_setting, 5)
             scan_bits[i].ClkFlip               = np.binary_repr(clk_flip,1)
             scan_bits[i].ClkBypass             = '0'
             
             # Configure pattern reset signal
             scan_bits[i].PattResetControlledByTriggerExt       = '0' 
             scan_bits[i].PattResetExtEnable    = '0'
-            
-            # Configure individual VCSEL
-            # if (i == 0) or (i == 1) or (i == 2):
-            # if i == 0:
-            #     scan_bits[i].VCSELWave1Enable         = '1'    
-            # else:   
-            #     scan_bits[i].VCSELWave1Enable         = '0'   
                 
             # Configure VCSELs
-            scan_bits[i].VCSELWave1Enable         = '1'    
-            scan_bits[i].VCSELEnableWithScan        = '1'     
-            scan_bits[i].VCSELEnableControlledByScan        = '1' 
+            scan_bits[i].VCSELWave1Enable         = '0'    
+            scan_bits[i].VCSELEnableWithScan        = '0'     
+            scan_bits[i].VCSELEnableControlledByScan        = '0' 
             scan_bits[i].VCSELWave2Enable         = '0'
             
             # Configure TxData
@@ -334,27 +351,11 @@ for time_gate_value in time_gate_list:
             scan_bits[i].TxDataExtRequestEnable = '0'
             
             # Configure subtractor
-            scan_bits[i].TimeOffsetWord        = np.binary_repr(143, 10)
-            scan_bits[0].TimeOffsetWord         = np.binary_repr(153, 10)
-            scan_bits[1].TimeOffsetWord         = np.binary_repr(151, 10)
-            scan_bits[2].TimeOffsetWord         = np.binary_repr(154, 10)
-            scan_bits[3].TimeOffsetWord         = np.binary_repr(150, 10)
-            scan_bits[4].TimeOffsetWord         = np.binary_repr(153, 10)
-            scan_bits[5].TimeOffsetWord         = np.binary_repr(153, 10)
-            scan_bits[6].TimeOffsetWord         = np.binary_repr(154, 10)
-            scan_bits[7].TimeOffsetWord         = np.binary_repr(155, 10)
-            scan_bits[8].TimeOffsetWord         = np.binary_repr(151, 10)
-            scan_bits[9].TimeOffsetWord         = np.binary_repr(155, 10)
-            scan_bits[10].TimeOffsetWord         = np.binary_repr(153, 10)
-            scan_bits[11].TimeOffsetWord         = np.binary_repr(153, 10)
-            scan_bits[12].TimeOffsetWord         = np.binary_repr(153, 10)
-            scan_bits[13].TimeOffsetWord         = np.binary_repr(154, 10)
-            scan_bits[14].TimeOffsetWord         = np.binary_repr(154, 10)
-            scan_bits[15].TimeOffsetWord         = np.binary_repr(151, 10)           
-
+            scan_bits[i].TimeOffsetWord        = np.binary_repr(subtractor_value, 10)
             scan_bits[i].SubtractorBypass      = '0'
             
-            scan_bits[i].DynamicConfigEnable = '0'
+            # Dynamic operation
+            scan_bits[i].DynamicConfigEnable = '1' if dynamic_mode else '0'
             
             # Configure SPADs
             scan_bits[i].SPADEnable            = '1'*64
@@ -395,16 +396,41 @@ for time_gate_value in time_gate_list:
         
         print("Done configuring")
 
+
         # =============================================================================
         # Send information to frame controller prior to capture
         # =============================================================================
         # Update FSM settings
-        dut.FrameController.send_frame_data( pattern_pipe,      \
-                                            number_of_chips, \
+        dut.FrameController.send_frame_data( number_of_chips, \
                                             number_of_frames,   \
                                             patt_per_frame,     \
                                             meas_per_patt,
                                             pad_captured_mask )
+            
+        # =============================================================================
+        # Create an emitter pattern
+        # =============================================================================
+        if dynamic_mode:
+            dynamic_packet = DynamicPacket.DynamicPacket(number_of_chips, patt_per_frame)
+            
+            # These settings are maintained through all patterns
+            dynamic_packet.fill(field_dict={    'nir_vcsel_enable': '1', \
+                                                'driver_dll_word': np.binary_repr(vcsel_setting, 5), \
+                                                'clk_flip': np.binary_repr(clk_flip,1), \
+                                                'aqc_dll_coarse_word': np.binary_repr(coarse, 4), \
+                                                'aqc_dll_fine_word': np.binary_repr(fine, 3), \
+                                                'aqc_dll_finest_word': np.binary_repr(finest, 1), \
+                                                })
+                
+            # # Sweep emitter
+            for p in range(patt_per_frame):
+                dynamic_packet.fill(pattern_list=[p], chip_list=[p], field_dict={'vcsel_enable': '1'})
+            
+            # Show results
+            dynamic_packet.show()
+            
+            # Activate dynamic mode
+            dut.activate_dynamic_mode(dynamic_packet)
 
         
         # =============================================================================
@@ -418,87 +444,46 @@ for time_gate_value in time_gate_list:
         # =============================================================================
         # Image capture loop
         # =============================================================================
-        while True:#for i in range(captures):
+        print("Blitzing histograms")
+        
+        # Initialize capture count
+        c = 0
+        
+        # Start blitz
+        dut.FrameController.begin_blitz()
+        
+        # Begin blitz
+        while True:
             
-            if not time_recorded:
-                time_init = time.time()
-                timestamp = 0.0
-                time_recorded = True
-            else:
-                timestamp = time.time() - time_init                
-            
-            # Run capture
-            # dut.check_fifo_data_counts()
-            dut.FrameController.run_capture()
-            
-            
-            # Run capture
-            # dut.FrameController.set_fsm_bypass()
-            # time.sleep(meas_per_patt*1/50e6)
-            # dut.FrameController.unset_fsm_bypass()
-            
-            # dut.check_fifo_data_counts()
-
-            
-            # Read the data
-            # s = dut.fpga_interface.pipe_out_master_fifo_to_string(packet) 
-            dut.read_master_fifo_data(packet)
-            
-            # print("Packet 0")
-            # print(s[0:4800])
-            # print(packet.data[0])
-            # s = dut.fpga_interface.pipe_out_master_fifo_to_string(packet)
-            # dut.read_master_fifo_data(packet)
-            # print("Packet 1")
-            # # print(s[0:4800])
-            # print(packet.data[0])
-
- 
-            # Update the plot
-            if plotting:
-                data_plotter.update_plot() 
+            if dut.check_ram_trigger():
                 
-            # Write to log file
-            if logging:
-                log_data = str(timestamp) + ',' + str(time_gating_delay) + ','
-                for chip in range(number_of_chips):
-                    log_data = log_data + data[chip] + ','
-                log_data = log_data +  \
-                                       str(clk_freq)                + ',' + \
-                                       str(number_of_frames)        + ',' + \
-                                       str(patt_per_frame)          + ',' + \
-                                       str(meas_per_patt)           + ',' + \
-                                       str(subtractor_value)        + ',' + \
-                                       str(int(clk_flip))           + ',' + \
-                                       str(vcsel_setting)           + ',' + \
-                                       str(spad_voltage)            + ',' + \
-                                       str(vrst_voltage)            + ',' + \
-                                       str(vcsel_bias)              + ',' + \
-                                       str(pipe_pattern)            + '\n'
-                log_file.write(log_data)
+                # Increment capture count
+                c = c + 1
+                
+                # Read data
+                dut.read_master_fifo_data(packet)
             
-            # # Uncomment for step-through debug process
-            # print("Capture " + str(i))
-            # dut.check_fifo_data_counts()
-            # if i == 0:
-            #     dut.read_master_fifo_data(packet)
-            # if i % 10 == 0:
-            #     input()
-
-            
-        # Print frame rate
-        # print("Frame Rate is " + str(int(i/timestamp)) + " Hz")
+                # Save
+                if logging:
+                    np.save(os.path.join(experiment_dir, "capture_" + str(c) + ".npy"), packet.data)
+                
+                # Update the plot
+                if plotting:
+                    data_plotter.update_plot()
+                    
+                # Check
+                if c == number_of_captures - 1:
+                    break
     
     # =============================================================================
     # Disable supplies, close plots, log files, and FPGA on exit
     # =============================================================================
     finally:
-        # dut.disable_hvdd_ldo_supply()
+        dut.FrameController.end_blitz()
+        print("Finished blitzing histograms")
+        dut.disable_hvdd_ldo_supply()
         dut.disable_cath_sm_supply()
         print("Closing FPGA")
         dut.fpga_interface.xem.Close()
         if data_plotter_created:
             data_plotter.close()
-        if logging:
-            print("Closing log file")
-            log_file.close()

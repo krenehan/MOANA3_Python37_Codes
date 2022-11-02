@@ -10,7 +10,6 @@ API for communicating with the Frame Controller on the FPGA.
 import time
 import  __address__ as addr
 from math import ceil
-import numpy as np
 
 
 # ====================================================
@@ -30,14 +29,14 @@ class FrameController:
     __capture_start = False
     __capture_interrupt = False
     __data_stream = False
+    __blitz_mode = False
     
     # Frame data settings
+    __packets_per_transfer = 0
     __number_of_frames = 0
     __patterns_per_frame = 0
     __measurements_per_pattern = 0
-    __number_of_bits = 0
     __pad_captured_mask = 0b0000000000000000
-
     
     # Capture wait time (s)
     __capture_wait_time = 0.0
@@ -56,6 +55,7 @@ class FrameController:
     __SIGNAL_FRAME_CONTROLLER_RESET = 0x0010
     __SIGNAL_FSM_BYPASS =             0x0020
     __SIGNAL_DATA_STREAM =            0x0040
+    __SIGNAL_BLITZ_MODE =             0x0080
     
     # Software Out Frame Controller Signals
     __SIGNAL_CAPTURE_IDLE =           0x0020
@@ -71,6 +71,7 @@ class FrameController:
     __STATE_FINISH_CAPTURE =          0x10
     __STATE_RESET =                   0x20
     __STATE_STREAM_RESUME =           0x40
+    __STATE_BLITZ =                   0x80
     
     # Clock period (ns)
     period = 20.0
@@ -79,11 +80,7 @@ class FrameController:
     # Number of chips
     __number_of_chips =               0
     
-    # Pattern pipe
-    __pattern_pipe =                  None
-    
     # 16-bit words per histogram
-    #__number_of_words_per_histogram =   1824/16
     __number_of_words_per_histogram =   300
     __data_stream_words_per_transfer =  0
     
@@ -111,6 +108,48 @@ class FrameController:
         self.frame_controller_signal['frame_controller_reset'] =    self.__SIGNAL_FRAME_CONTROLLER_RESET
         self.frame_controller_signal['fsm_bypass'] =                self.__SIGNAL_FSM_BYPASS
         self.frame_controller_signal['data_stream'] =               self.__SIGNAL_DATA_STREAM
+        self.frame_controller_signal['blitz_mode'] =                self.__SIGNAL_BLITZ_MODE
+        
+        
+    # ====================================================
+    # Run data stream routine
+    # ====================================================
+    def begin_blitz(self):
+        ''' Begin the blitz routine '''
+            
+        # Check that stream configuration was sent
+        if not self.__data_stream_config_sent:
+            raise FrameControllerError("Must call send_data_stream_config before calling begin_blitz")
+            
+        # End scan process
+        self.__set_scan_done()
+        
+        # Send frame data
+        self.__run_send_frame_data()
+        
+        # Start stream process
+        self.__set_blitz_mode()
+        
+        
+    # ====================================================
+    # Run data stream routine
+    # ====================================================
+    def begin_stream(self):
+        ''' Begin the stream routine '''
+            
+        # Check that stream configuration was sent
+        if not self.__data_stream_config_sent:
+            raise FrameControllerError("Must call send_data_stream_config before calling run_stream")
+            
+        # End scan process
+        self.__set_scan_done()
+        
+        # Send frame data
+        self.__run_send_frame_data()
+        
+        # Start stream process
+        self.__set_data_stream()
+    
     
     # ====================================================
     # Check that the capture is complete
@@ -146,14 +185,6 @@ class FrameController:
             return True
         else:
             return False
-        
-        
-    # ====================================================
-    # Check the emitter pattern packet
-    # ====================================================
-    def check_emitter_pattern_packet(self):
-        out = self.__fpga_interface.wire_out(0x29)
-        print("Emitter pattern: " + bin(out).split('b')[1].zfill(2))
     
     
     # ====================================================
@@ -166,22 +197,53 @@ class FrameController:
             return True
         else:
             return False
+
+
+    # ====================================================
+    # Check state of frame controller
+    # ====================================================
+    def check_state(self):
+        
+        s = self.__fpga_interface.wire_out(addr.ADDR_WIRE_OUT_FC_STATE)
+        if s == self.__STATE_IDLE:
+            return "Frame controller state is IDLE"
+        elif s == self.__STATE_HANDSHAKE:
+            return "Frame controller state is HANDSHAKE"
+        elif s == self.__STATE_RUN_CAPTURE:
+            return "Frame controller state is RUN_CAPTURE"
+        elif s == self.__STATE_FINISH_DATATX:
+            return "Frame controller state is FINISH_DATATX"
+        elif s == self.__STATE_FINISH_CAPTURE:
+            return "Frame controller state is FINISH_CAPTURE"
+        elif s == self.__STATE_RESET:
+            return "Frame controller state is RESET"
+        elif s == self.__STATE_STREAM_RESUME:
+            return "Frame controller state is STREAM_RESUME"
+        elif s == self.__STATE_BLITZ:
+            return "Frame controller state is BLITZ"
+        else:
+            return "Frame controller state is unknown"
         
         
     # ====================================================
-    # Check the register bank
+    # End data stream routine
     # ====================================================
-    def check_register_bank(self):
-        lsb = self.__fpga_interface.wire_out(addr.ADDR_WIRE_OUT_REGBANK_LSB)
-        msb = self.__fpga_interface.wire_out(addr.ADDR_WIRE_OUT_REGBANK_MSB)
-        print("Register bank value: " + bin((msb << 16) + lsb).split('b')[1].zfill(32))
+    def end_blitz(self):
+        ''' End the blitz routine '''
+        
+        # Start stream process
+        self.__unset_blitz_mode()
+
         
         
     # ====================================================
-    # Get pipe pattern
+    # End data stream routine
     # ====================================================
-    def get_pattern_pipe(self):
-        return(self.__pattern_pipe)
+    def end_stream(self):
+        ''' End the stream routine '''
+        
+        # Start stream process
+        self.__unset_data_stream()
     
         
     # ====================================================
@@ -221,36 +283,6 @@ class FrameController:
         self.__data_stream_config_sent = False
         self.__data_stream = False
         self.__pulse_frame_controller_reset()
-        
-        
-    # ====================================================
-    # Run data stream routine
-    # ====================================================
-    def begin_stream(self):
-        ''' Begin the stream routine '''
-            
-        # Check that stream configuration was sent
-        if not self.__data_stream_config_sent:
-            raise FrameControllerError("Must call send_data_stream_config before calling run_stream")
-            
-        # End scan process
-        self.__set_scan_done()
-        
-        # Send frame data
-        self.__run_send_frame_data()
-        
-        # Start stream process
-        self.__set_data_stream()
-        
-        
-    # ====================================================
-    # End data stream routine
-    # ====================================================
-    def end_stream(self):
-        ''' End the stream routine '''
-        
-        # Start stream process
-        self.__unset_data_stream()
     
     
     # ====================================================
@@ -278,30 +310,20 @@ class FrameController:
                 # End scan process
                 self.__set_scan_done()
                 
-                # print("After scan done -> " + self.check_state())
-                
                 # Send frame data
                 self.__run_send_frame_data()
-                # print("After send frame data -> " + self.check_state())
             
                 # Start the capture
                 self.__set_capture_start()
-                # print("After capture start -> " + self.check_state())
                 
                 # Wait a little
                 time.sleep(self.__capture_wait_time)
-                # print("After waiting -> " + self.check_state())
-                # time.sleep(10e-3)
-                # print("After waiting -> " + self.check_state())
-                # time.sleep(10e-3)
-                # print("After waiting -> " + self.check_state())
                 
                 # Check that the capture process is done
                 self.__run_capture_done()
                 
                 # Ensure that the frame controller is in idle state
                 self.__run_capture_idle()
-                # print("End of capture -> " + self.check_state())
                 
                 # Add to successful captures
                 __successful_captures = __successful_captures + 1
@@ -311,7 +333,6 @@ class FrameController:
                 # Pulse the reset and try again
                 print(str(e))
                 print("Resetting frame controller and trying again")
-                #self.report_frame_controller_status()
                 self.reset()
                 self.__fpga_interface.reset_fifos()
                 
@@ -319,7 +340,7 @@ class FrameController:
     # ====================================================
     # Send configuration information to the frame controller
     # ====================================================
-    def send_frame_data(self, pattern_pipe, number_of_chips, number_of_frames, patterns_per_frame, measurements_per_pattern, pad_captured_mask):
+    def send_frame_data(self, number_of_chips, number_of_frames, patterns_per_frame, measurements_per_pattern, pad_captured_mask):
         ''' Send configuration data to the frame controller'''
         
         # Retain number of chips
@@ -334,14 +355,11 @@ class FrameController:
         # Update the measurements per pattern
         self.__update_measurements_per_pattern(measurements_per_pattern)
         
-        # Update the pattern pipe 
-        self.__update_pattern_pipe(pattern_pipe)
+        # Update the packets per transfer
+        self.__update_packets_per_transfer(number_of_frames * patterns_per_frame)
         
         # Update the pad_captured mask
         self.__update_pad_captured_mask(pad_captured_mask)
-        
-        # Get the FIFO size
-        self.__get_fifo_size()
         
         # Calculate the wait time
         self.__capture_wait_time = self.period * 1e-9 * measurements_per_pattern * patterns_per_frame * number_of_frames
@@ -354,30 +372,6 @@ class FrameController:
         
         # Check configuration settings before run
         self.__check_for_configuration_errors()
-        
-    
-    def __send_data_stream_config(self):
-        ''' Send number of 16-bit words per transfer (per chip) to the frame controller, return read buffer '''
-        
-        # Check that frame data was specified beforehand
-        if not self.__ready_to_run_capture:
-            raise FrameControllerError("Must call send_frame_data before calling send_data_stream_config")
-        
-        # Calculate number of 16-bit words in a single transfer for a single chip
-        self.__number_of_words_per_transfer = int(self.__number_of_frames * self.__patterns_per_frame * self.__number_of_words_per_histogram)
-            
-        # Send to frame controller
-        self.__update_data_stream_words_per_transfer(self.__number_of_words_per_transfer)
-        
-        # Indicate that data stream config was sent
-        self.__data_stream_config_sent = True
-        
-    
-    # # ====================================================
-    # # Set the clock period in nanoseconds so that we can accurately predict how much time is needed for capture to finish
-    # # ====================================================
-    # def set_clock_period(self, clock_period):
-    #     self.period = clock_period
         
         
     # ====================================================
@@ -401,6 +395,30 @@ class FrameController:
     def unset_fsm_bypass(self):
         self.__tielo_signal('fsm_bypass')
         self.__fsm_bypass = False
+        
+        
+    # ====================================================
+    # Check for configuration erros in the test platform
+    # ====================================================
+    def __check_for_configuration_errors(self):
+        
+        # Check clock frequencies
+        if self.period < 10:
+            raise FrameControllerError("RefClk frequency must be less than or equal to 100 MHz for proper chip operation")
+        if self.txperiod < 40:
+            raise FrameControllerError("TxRefClk frequency must be less than or equal to 25 MHz for proper chip operation")
+            
+        # Check that measurements per pattern does not exceed 24 bits
+        if self.__measurements_per_pattern > 2**24-1:
+            raise FrameControllerError("Measurements per pattern cannot exceed " + str(2**24-1))
+            
+        # Check that number of words per transfer is divisible by 4 (because of 32->128 FIFO)
+        if ( (self.__number_of_words_per_transfer * self.__number_of_chips) % 4):
+            raise FrameControllerError("The total number of 32b bin values (chips*frames*patterns*bins) transferred from the FPGA to the PC must be divisible by 4")
+            
+        # Ensure that number of words per transfer is not too large
+        if (self.__number_of_words_per_transfer > 2**16-1):
+            raise FrameControllerError("Number of words per transfer is greater than 2^16-1")
         
     
     # ====================================================
@@ -491,6 +509,41 @@ class FrameController:
             else:
                 pass
                 # raise FrameControllerError("Frame data not received")
+        
+        
+    # ====================================================
+    # Set the blitz_mode bit
+    # ====================================================
+    def __set_blitz_mode(self):
+        self.__tiehi_signal('blitz_mode')
+        self.__blitz_mode = True
+        
+    
+    # ====================================================
+    # Send the number of words per transfer
+    # ====================================================
+    def __send_data_stream_config(self):
+        ''' Send number of 16-bit words per transfer (per chip) to the frame controller, return read buffer '''
+        
+        # Check that frame data was specified beforehand
+        if not self.__ready_to_run_capture:
+            raise FrameControllerError("Must call send_frame_data before calling send_data_stream_config")
+        
+        # Calculate number of 16-bit words in a single transfer for a single chip
+        self.__number_of_words_per_transfer = self.__number_of_words_per_histogram
+        
+        # Check that number of words per transfer is divisible by 2
+        if (self.__number_of_words_per_transfer % 2):
+            raise FrameControllerError("Number of words per transfer is not divisible by 2")
+            
+        # Divide by 2
+        self.__number_of_words_per_transfer = self.__number_of_words_per_transfer // 2
+            
+        # Send to frame controller
+        self.__update_data_stream_words_per_transfer(self.__number_of_words_per_transfer) # (Added divide by 2 for RAM controller)
+        
+        # Indicate that data stream config was sent
+        self.__data_stream_config_sent = True
     
     
     # ====================================================
@@ -507,6 +560,14 @@ class FrameController:
     def __set_capture_start(self):
         self.__tiehi_signal('capture_start')
         self.__capture_start = True
+        
+        
+    # ====================================================
+    # Set the data_stream bit
+    # ====================================================
+    def __set_data_stream(self):
+        self.__tiehi_signal('data_stream')
+        self.__data_stream = True
     
     
     # ====================================================
@@ -534,14 +595,6 @@ class FrameController:
         
         
     # ====================================================
-    # Set the data_stream bit
-    # ====================================================
-    def __set_data_stream(self):
-        self.__tiehi_signal('data_stream')
-        self.__data_stream = True
-        
-        
-    # ====================================================
     # Tie a signal high
     # ====================================================
     def __tiehi_signal(self, signal_name):
@@ -555,6 +608,14 @@ class FrameController:
     def __tielo_signal(self, signal_name):
         self.__framectrl_reg = self.__framectrl_reg & (~self.__get_frame_controller_signal(signal_name))
         self.__fpga_interface.wire_in(addr.ADDR_WIRE_IN_FRAMECTRL, self.__framectrl_reg)
+        
+        
+    # ====================================================
+    # Notify the frame controller that blitz mode operation is over
+    # ====================================================
+    def __unset_blitz_mode(self):
+        self.__tielo_signal('blitz_mode')
+        self.__blitz_mode = False
     
     
     # ====================================================
@@ -571,6 +632,22 @@ class FrameController:
     def __unset_capture_start(self):
         self.__tielo_signal('capture_start')
         self.__capture_start = False
+        
+        
+    # ====================================================
+    # Notify the frame controller that data streaming is over
+    # ====================================================
+    def __unset_data_stream(self):
+        self.__tielo_signal('data_stream')
+        self.__data_stream = False
+        
+        
+    # ====================================================
+    # Update the words per transfer in the data stream
+    # ====================================================
+    def __update_data_stream_words_per_transfer(self, words_per_transfer):
+        self.__fpga_interface.wire_in(addr.ADDR_WIRE_IN_STREAM, words_per_transfer)
+        self.__data_stream_words_per_transfer = words_per_transfer
     
     
     # ====================================================
@@ -595,14 +672,6 @@ class FrameController:
     def __unset_scan_done(self):
         self.__tielo_signal('scan_done')
         self.__scan_done = False
-        
-        
-    # ====================================================
-    # Notify the frame controller that data streaming is over
-    # ====================================================
-    def __unset_data_stream(self):
-        self.__tielo_signal('data_stream')
-        self.__data_stream = False
     
     
     # ====================================================
@@ -622,6 +691,21 @@ class FrameController:
     def __update_number_of_frames(self, number_of_frames):
         self.__fpga_interface.wire_in(addr.ADDR_WIRE_IN_FRAME, number_of_frames)
         self.__number_of_frames = number_of_frames
+        
+      
+    # ====================================================
+    # Update the packets in a transfer
+    # ====================================================
+    def __update_packets_per_transfer(self, packets_per_transfer):
+        self.__fpga_interface.wire_in(addr.ADDR_WIREIN_PACKETS_IN_TRANSFER, packets_per_transfer)
+        self.__packets_per_transfer = packets_per_transfer
+        
+        
+    # ====================================================
+    # Update the pad_captured mask
+    # ====================================================
+    def __update_pad_captured_mask(self, pad_captured_mask):
+        self.__fpga_interface.wire_in(addr.ADDR_WIRE_IN_PAD_CAPTURED_MASK, pad_captured_mask)
     
     
     # ====================================================
@@ -630,143 +714,6 @@ class FrameController:
     def __update_patterns_per_frame(self, patterns_per_frame):
         self.__fpga_interface.wire_in(addr.ADDR_WIRE_IN_PATTERN, patterns_per_frame)
         self.__patterns_per_frame = patterns_per_frame
-        
-    
-    # ====================================================
-    # Read the FIFO size from the FPGA
-    # ====================================================
-    def __get_fifo_size(self):
-        self.__fifo_size = self.__fpga_interface.wire_out(addr.ADDR_WIRE_OUT_FIFO_SIZE)
-        
-        
-    # ====================================================
-    # Update the pad_captured mask
-    # ====================================================
-    def __update_pad_captured_mask(self, pad_captured_mask):
-        self.__fpga_interface.wire_in(addr.ADDR_WIRE_IN_PAD_CAPTURED_MASK, pad_captured_mask)
-        
 
-        
-    # ====================================================
-    # Update the pattern pipe
-    # ====================================================
-    def __update_pattern_pipe(self, pattern_pipe):
-    
-        # Create pattern bits
-        l = []
-        for pattern in range(self.__patterns_per_frame):
-            n = ''
-            for chip in range(16): # Note that this was changed to 16
-                if chip < self.__number_of_chips:
-                    if pattern_pipe[pattern][chip]:
-                        n = n + '1'
-                    else:
-                        n = n + '0'
-                else:
-                    n = n + '0'
-            # print("Pattern {}: {}".format(pattern, n))
-            l.append(n[::-1])
-        # print(l)
-    
-        # Append bits
-        bitstring = ''
-        for i in range(len(l)):
-            bitstring = bitstring + l[i]
-        # print(bitstring)
-        
-        # The pipe2registerbank module expects 16^2 bits, but if this is below 16-bits, it needs to be extended
-        transfers_to_send = int(ceil(len(bitstring) / 16))
-        bits_to_send = int(transfers_to_send * 16)
-        
-        if bits_to_send < 16**2:
-            bits_to_send = 16**2
-        
-        # Extend to 16-bit increment
-        zeros_to_append = bits_to_send - len(bitstring)
-        bitstring = bitstring + '0'*zeros_to_append
-        # print(bitstring)
-        
-        # Pack bits into bytes
-        b_array = bytearray(int(bits_to_send/8))
-        for i in range(len(b_array)):
-            b_array[i] = int(bitstring[i*8:(i+1)*8], base=2)
-        # print(b_array)
-        
-        #b_array = self.__bug_fix_v2(b_array)
-    
-        # for i in range(len(b_array)):
-        #     print("Byte {}: {}".format(i, np.binary_repr(b_array[i], 8)))
-            
-        # For 2 patterns per frame, this should be 2 bytes, each byte containing the emitter number
-        self.__fpga_interface.pipe_in_pattern( addr.ADDR_PIPE_IN_PATTERN, b_array)
-        
-        
-    # ====================================================
-    # Update the words per transfer in the data stream
-    # ====================================================
-    def __update_data_stream_words_per_transfer(self, words_per_transfer):
-        self.__fpga_interface.wire_in(addr.ADDR_WIRE_IN_STREAM, words_per_transfer)
-        self.__data_stream_words_per_transfer = words_per_transfer
-        
-        
-        
-    # ====================================================
-    # Check for configuration erros in the test platform
-    # ====================================================
-    def __check_for_configuration_errors(self):
-        
-        # Check clock frequencies
-        if self.period < 10:
-            raise FrameControllerError("RefClk frequency must be less than or equal to 100 MHz for proper chip operation")
-        if self.txperiod < 40:
-            raise FrameControllerError("TxRefClk frequency must be less than or equal to 25 MHz for proper chip operation")
-            
-        # Check that measurements per pattern does not exceed 24 bits
-        if self.__measurements_per_pattern > 2**24-1:
-            raise FrameControllerError("Measurements per pattern cannot exceed " + str(2**24-1))
-            
-        
-        # # Check that data streamout has adequate time to complete
-        # min_meas_per_patt = int(self.txperiod / self.period * self.__number_of_words_per_histogram * 16)
-        # if min_meas_per_patt >= self.__measurements_per_pattern:
-        #     if min_meas_per_patt < 2**24-1:
-        #         raise FrameControllerError("Insufficient time for data streamout in current configuration" + "\n" + "Increase measurements per pattern to at least " + str(min_meas_per_patt))
-        #     else:
-        #         raise FrameControllerError("Insufficient time for data streamout in current configuration" + "\n" + "Increase TxRefClk frequency or decrease RefClk frequency")
-                
-        # Check the number of patterns
-        if self.__patterns_per_frame > 16:
-            raise FrameControllerError("Number of patterns must be less than 16")
-            
-        # Check that the FIFO won't overflow at this data rate
-        if self.__number_of_words_per_histogram * self.__number_of_frames * self.__patterns_per_frame > self.__fifo_size:
-            a = self.__fifo_size // self.__number_of_words_per_histogram
-            raise FrameControllerError("Number of patterns and frames is too large" + "\n" + "Number of frames * patterns per frame needs to be less than " + str(a))
-            
-        # Ensure that number of words per transfer is not too large
-        if (self.__number_of_words_per_transfer > 2**16-1):
-            raise FrameControllerError("Number of words per transfer is greater than 2^16-1")
-
-
-    # ====================================================
-    # Check state of frame controller
-    # ====================================================
-    def check_state(self):
-        
-        s = self.__fpga_interface.wire_out(addr.ADDR_WIRE_OUT_FC_STATE)
-        if s == self.__STATE_IDLE:
-            return "Frame controller state is IDLE"
-        elif s == self.__STATE_HANDSHAKE:
-            return "Frame controller state is HANDSHAKE"
-        elif s == self.__STATE_RUN_CAPTURE:
-            return "Frame controller state is RUN_CAPTURE"
-        elif s == self.__STATE_FINISH_DATATX:
-            return "Frame controller state is FINISH_DATATX"
-        elif s == self.__STATE_FINISH_CAPTURE:
-            return "Frame controller state is FINISH_CAPTURE"
-        elif s == self.__STATE_RESET:
-            return "Frame controller state is RESET"
-        elif s == self.__STATE_STREAM_RESUME:
-            return "Frame controller state is STREAM_RESUME"
             
         

@@ -34,6 +34,8 @@ class Infrastructure:
 
         self.chip_signal['cell_reset'] =                __signal__.SIGNAL_CELL_RST
         self.chip_signal['scan_reset'] =                __signal__.SIGNAL_SCAN_RST
+        self.chip_signal['dynamic_mode'] =              __signal__.SIGNAL_DYNAMIC_MODE
+        self.chip_signal['dynamic_pattern_pipe_in_complete'] = __signal__.SIGNAL_DYNAMIC_PATTERN_PIPE_IN_COMPLETE
         
         # Software in power signals
         self.chip_signal['hvdd_ldo_enable'] =           __signal__.SIGNAL_HVDD_LDO_ENABLE

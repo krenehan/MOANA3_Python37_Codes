@@ -10,6 +10,7 @@ import numpy
 
 # Verbose
 verbose = False
+continuous_mode = True
 
 # Set chip number
 number_of_chips = 2
@@ -68,11 +69,13 @@ try:
     # =============================================================================
     # Frame parameters
     # =============================================================================
-    meas_per_patt                   = 500000
+    meas_per_patt                   = 50000
     patt_per_frame                  = 1
-    number_of_frames                = 1
+    number_of_frames                = 100
     period                          = round(1/refclk_freq*1e9, 1)
-    pad_captured_mask               = 0b11
+    pad_captured_mask               = 0b11    # Keep track of passes and failures
+    passed                          = 0
+    failed                          = 0
     
     
     # =============================================================================
@@ -148,41 +151,64 @@ try:
     
     # Receive array
     packet = DataPacket.DataPacket(number_of_chips, number_of_frames, patt_per_frame, meas_per_patt, period, compute_mean=False)
-        
-    # Test pattern in, test pattern out loop
-    for DataIn in (0b1011,):#range(1, 1023, 8):
-        
-        expected_packet = (DataIn << 10) + DataIn
-        
-        # Console header
-        print("------------ Test Pattern Data: " + np.binary_repr(DataIn, 10) + " ------------")
+    
+    # Flag for setting fsm bypass
+    fsm_bypass_set = False
+    
+    # Data packets for chips, must be constant when running continuously
+    DataIn = (np.random.randint(0, 1023), np.random.randint(0, 1023))
+    
+    # Run capture and check process
+    for c in range(10000):
         
         for i in range(number_of_chips):
             
+            print("------------ Capture " + str(c) + ": Chip " + str(i) + " Data " + np.binary_repr(DataIn[i], 10) + " ------------")
+            
             # Set Test Data In
-            scan_bits[i].TestDataIn            = np.binary_repr(DataIn, 10)
+            scan_bits[i].TestDataIn            = np.binary_repr(DataIn[i], 10)
             
             # Make scan bits for the fpga
             dut.commit_scan_chain(row[i])
             time.sleep(config_wait)
         
         # Update FSM settings
-        pattern_pipe = np.zeros((patt_per_frame, number_of_chips), dtype=int)
-        dut.FrameController.send_frame_data( pattern_pipe,      \
-                                            number_of_chips, \
+        dut.FrameController.send_frame_data( number_of_chips, \
                                             number_of_frames,   \
                                             patt_per_frame,     \
                                             meas_per_patt, \
                                             pad_captured_mask)
+        # Capture
+        if continuous_mode:
             
-        # Run capture
-        dut.FrameController.run_capture()
+            if fsm_bypass_set == False:
+                dut.check_ram_trigger()
+                dut.FrameController.set_fsm_bypass()
+                fsm_bypass_set = True
+            
+            # Wait for ram trigger
+            while dut.check_ram_trigger() == False:
+                pass
+            
+        else:
+            
+            # Run capture
+            dut.FrameController.run_capture()
     
         # Read the FIFOs
         dut.read_master_fifo_data(packet)
         
-        # Work directly with receive array
-        receive_array = np.flip(np.reshape(packet.receive_array, (number_of_chips, number_of_frames*patt_per_frame*150)), axis=0)
+        # Work directly with receive array, reshape to correct size
+        receive_array = np.reshape(packet.receive_array, (number_of_frames, patt_per_frame, number_of_chips, 150))
+        
+        # Transpose so that chip axis comes first
+        receive_array = np.transpose(receive_array, axes=(2,0,1,3))
+        
+        # Flip along chip axis (would normally be every axis, but data is all the same past chip axis)
+        receive_array = np.flip(receive_array, axis=(0,))
+        
+        # Flatten array beyond chip axis
+        receive_array = np.reshape(receive_array, (number_of_chips, number_of_frames*patt_per_frame*150))
 
         # Figure out if the test was passed
         test_passed = [True for chip in range(number_of_chips)]
@@ -200,9 +226,9 @@ try:
                 for j in range(300):
                     packet_data = data[frame*bits_in_frame+10*j:frame*bits_in_frame+10*(j+1)]
                     if verbose:
-                        print("Packet data is " + str(int(packet_data, base=2)) + " and should be " + str(DataIn))
-                        print("Packet data is " + packet_data + " and should be " + str(np.binary_repr(DataIn, 10)))
-                    if (int(packet_data, base = 2) != DataIn):
+                        print("Packet data is " + str(int(packet_data, base=2)) + " and should be " + str(DataIn[chip]))
+                        print("Packet data is " + packet_data + " and should be " + str(np.binary_repr(DataIn[chip], 10)))
+                    if (int(packet_data, base = 2) != DataIn[chip]):
                         test_passed[chip] = False
                         break
                 if test_passed[chip] == False:
@@ -212,6 +238,7 @@ try:
         print("Chips (", end='')
         for i in range(number_of_chips):
             if test_passed[i]:
+                passed = passed + 1
                 print(str(i) + ", ", end='')        
         print(") passed")
               
@@ -219,11 +246,14 @@ try:
         print("Chips (", end='')
         for i in range(number_of_chips):
             if not test_passed[i]:
+                failed = failed + 1
                 print(str(i) + ", ", end='')        
         print(") failed")
             
 
 finally:
+    print("Passed = " + str(passed))
+    print("Failed = " + str(failed))
     print("Closing FPGA")
     dut.fpga_interface.xem.Close()
     

@@ -5,7 +5,7 @@ Created on Thu Dec 16 15:32:25 2021
 @author: Dell-User
 """
 
-from numpy import empty, flip, reshape, mean, zeros
+from numpy import empty, flip, reshape, mean, zeros, transpose
 
 class DataPacket:
     
@@ -24,7 +24,6 @@ class DataPacket:
     
     # Constants
     __bins_per_histogram = 150
-    __bits_per_histogram = 3000
     __words_per_histogram = 300
     __bytes_per_histogram = 600
 
@@ -47,10 +46,10 @@ class DataPacket:
         self.__period = period
         
         # Calculate receive array size
-        self.__receive_array_size = self.__number_of_chips*self.__number_of_frames*self.__patterns_per_frame*self.__bins_per_histogram
+        self.__receive_array_size = self.__number_of_frames*self.__patterns_per_frame*self.__number_of_chips*self.__bins_per_histogram
         
         # Create the read buffer
-        self.rbuf = bytearray(self.__bytes_per_histogram*self.__number_of_chips*self.__number_of_frames*self.__patterns_per_frame)
+        self.rbuf = bytearray(self.__bytes_per_histogram*self.__number_of_frames*self.__number_of_chips*self.__patterns_per_frame)
         
         # Create the data array
         self.receive_array = empty((self.__receive_array_size), dtype=int)
@@ -75,10 +74,26 @@ class DataPacket:
             
 
     def __update_data(self):
+        
+        # Reshape receive array
+        a = reshape(self.receive_array, (self.__number_of_frames, self.__patterns_per_frame, self.__number_of_chips, self.__bins_per_histogram))
+        
+        # Flip
+        a = flip(a, axis=(0,1,2,3))
+        
+        # Transpose
+        a = transpose(a, axes=(2, 0, 1, 3))
+        
+        # Compute mean
         if self.__compute_mean:
-            self.__morphed_array = mean(flip(reshape(self.receive_array, (self.__number_of_chips, self.__number_of_frames, self.__patterns_per_frame, self.__bins_per_histogram)), axis=[self.__chip_axis, self.__pattern_axis, self.__bin_axis]), axis=self.__frame_axis, keepdims=True, dtype=int)
-        else:
-            self.__morphed_array = flip(reshape(self.receive_array, (self.__number_of_chips, self.__number_of_frames, self.__patterns_per_frame, self.__bins_per_histogram)), axis=[self.__chip_axis, self.__pattern_axis, self.__bin_axis])
+            a = mean(a, axis=(1,), keepdims=True, dtype=int)
+            
+        self.__morphed_array = a
+        
+        # if self.__compute_mean:
+        #     self.__morphed_array = mean(flip(reshape(self.receive_array, (self.__number_of_chips, self.__number_of_frames, self.__patterns_per_frame, self.__bins_per_histogram)), axis=[self.__chip_axis, self.__pattern_axis, self.__bin_axis]), axis=self.__frame_axis, keepdims=True, dtype=int)
+        # else:
+        #     self.__morphed_array = flip(reshape(self.receive_array, (self.__number_of_chips, self.__number_of_frames, self.__patterns_per_frame, self.__bins_per_histogram)), axis=[self.__chip_axis, self.__pattern_axis, self.__bin_axis])
             
         
     # ====================================================

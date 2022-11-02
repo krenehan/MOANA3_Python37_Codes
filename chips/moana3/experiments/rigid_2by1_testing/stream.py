@@ -7,8 +7,11 @@ from copy import deepcopy
 # Top-level parameters
 # =============================================================================
 
+# Verbose
+verbose = False
+
 # Number of captures per time gating setting
-captures = 10000
+captures = 1000
 
 # Number of chips
 number_of_chips = 2
@@ -26,23 +29,16 @@ time_gate_list = [0, ]
 # Test settings
 # Integration time = meas_per_patt * 1/clk_freq * patt_per_frame * number_of_frames
 # =============================================================================
-meas_per_patt                       = 100000
+meas_per_patt                       = 50000
 patt_per_frame                      = 1
-number_of_frames                    = 1
-spad_voltage                        = 27.7
+number_of_frames                    = 50
+spad_voltage                        = 24.7
 vrst_voltage                        = 3.3
 pad_captured_mask                   = 0b11
 
 # Report integration time
 integration_time = round(meas_per_patt * 1/clk_freq * patt_per_frame * number_of_frames * 1000, 1)
 print("Integration time is " + str(integration_time) + " ms")
-
-
-# =============================================================================
-# Create an emitter pattern
-# =============================================================================
-pattern_pipe =  np.zeros((patt_per_frame, number_of_chips), dtype=bool)
-# pattern_pipe[0][0] = True
 
 
 # =============================================================================
@@ -69,7 +65,7 @@ vcsel_enable_through_scan = False
 # Plotting options
 # =============================================================================
 # Fast mode overrides all othe plot settings and optimizes processing for fast collection of data
-fast_mode = False
+fast_mode = True
 
 # Raw plotting shows bins instead of time on the x-axis
 raw_plotting = True
@@ -84,8 +80,8 @@ log_plots = False
 show_plot_info = False
 
 # Enabling this fixes the y-axis at a max value
-fix_y_max = False
-y_max_value = 500
+fix_y_max = True
+y_max_value = 5000
 
     
 # =============================================================================
@@ -127,7 +123,7 @@ for time_gate_value in time_gate_list:
     # =============================================================================
     # Initialize the data packet
     # =============================================================================
-    packet = DataPacket.DataPacket(number_of_chips, number_of_frames, patt_per_frame, meas_per_patt, period, compute_mean=True)
+    packet = DataPacket.DataPacket(number_of_chips, number_of_frames, patt_per_frame, meas_per_patt, period, compute_mean=False)
 
     
     # =============================================================================
@@ -255,7 +251,10 @@ for time_gate_value in time_gate_list:
             
             # Configure TxData
             scan_bits[i].TestPattEnable        = '0'
-            scan_bits[i].TestDataIn            = np.binary_repr(10, 10)
+            if i == 0:
+                scan_bits[i].TestDataIn            = np.binary_repr(10, 10)
+            else:
+                scan_bits[i].TestDataIn            = np.binary_repr(2**9-1, 10)
             scan_bits[i].TxDataExtRequestEnable = '0'
             
             # Configure subtractor
@@ -283,8 +282,7 @@ for time_gate_value in time_gate_list:
         # Send information to frame controller prior to capture
         # =============================================================================
         # Update FSM settings
-        dut.FrameController.send_frame_data( pattern_pipe,      \
-                                            number_of_chips, \
+        dut.FrameController.send_frame_data( number_of_chips, \
                                             number_of_frames,   \
                                             patt_per_frame,     \
                                             meas_per_patt, \
@@ -301,31 +299,38 @@ for time_gate_value in time_gate_list:
         # =============================================================================
         # Image capture loop
         # =============================================================================
-        for i in range(captures):
+        print("Streaming histograms")
+        
+        # Clear artificial triggers
+        dut.check_read_trigger()
+        
+        # Start stream
+        dut.FrameController.begin_stream()  
+        
+        for c in range(number_of_captures):
             
-            # Run capture
-            dut.FrameController.run_capture()
+            if dut.check_read_trigger():
+                
+                # Acknowledge the read trigger
+                dut.acknowledge_read_trigger()
+                
+                # Read data
+                dut.read_master_fifo_data(packet)
             
-            # Check counts after capture
-            print("Packets after to capture " + str(i) + ":")
-            dut.check_fifo_data_counts()
-
-            # Read the data
-            dut.read_master_fifo_data(packet)
-            
-            # Check counts before capture
-            print("Packets after read " + str(i) + ":")
-            dut.check_fifo_data_counts() 
-
- 
-            # Update the plot
-            if plotting:
-                data_plotter.update_plot() 
+                # Save
+                if logging:
+                    np.save(os.path.join(experiment_dir, "capture_" + str(c) + ".npy"), packet.data)
+                
+                # Update the plot
+                if plotting:
+                    data_plotter.update_plot()
+                
     
     # =============================================================================
     # Disable supplies, close plots, log files, and FPGA on exit
     # =============================================================================
     finally:
+        dut.FrameController.end_stream()
         dut.disable_hvdd_ldo_supply()
         dut.disable_cath_sm_supply()
         print("Closing FPGA")
