@@ -1,6 +1,9 @@
 # Ignore data files
 */*/data/*
 
+# Except for utilities
+!*/*/data/utilities
+
 # Ignore the docs
 docs/*
 
