@@ -49,7 +49,6 @@ def roi_raw_histograms(bkg_key, roi_key, capture_window=None, data_dir_prefix=''
                 if (sp[4] == '-') and (sp[7] == '-') and (sp[10] == '_') and (sp[13] == '-') and (sp[16] == '-'):
                     
                     # Remove the datastring
-                    print("date string found")
                     date_string_found = True
                     d = d[0:len(d)-20]
                     

@@ -15,9 +15,9 @@ from roi_difference_matrix import roi_difference_matrix
 
 # Options
 do_raw_histogram = True
-do_contrast = False
-do_contrast_to_noise = False
-do_roi_difference_matrix = False
+do_contrast = True
+do_contrast_to_noise = True
+do_roi_difference_matrix = True
 
 # Background and ROI tags in directory names
 data_dir_prefix = 'nir_'
@@ -45,14 +45,14 @@ data_dir = os.path.join(target_dir, data_dir_prefix + 'data')
 os.chdir(data_dir)
 
 # Optional operations
+if do_roi_difference_matrix:
+    roi_difference_matrix(bkg_key, roi_key, capture_window=capture_window, data_dir_prefix=data_dir_prefix)
 if do_raw_histogram:
     roi_raw_histograms(bkg_key, roi_key, capture_window=capture_window, data_dir_prefix=data_dir_prefix)
 if do_contrast:
     roi_contrast(bkg_key, roi_key, capture_window=capture_window, data_dir_prefix=data_dir_prefix)
 if do_contrast_to_noise:
     roi_contrast_to_noise(bkg_key, roi_key, capture_window=capture_window, data_dir_prefix=data_dir_prefix)
-if do_roi_difference_matrix:
-    roi_difference_matrix(bkg_key, roi_key, capture_window=capture_window, data_dir_prefix=data_dir_prefix)
     
     
 print("Done")
