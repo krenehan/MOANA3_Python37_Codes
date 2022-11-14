@@ -123,6 +123,10 @@ def roi_raw_histograms(bkg_key, roi_key, capture_window=None, data_dir_prefix=''
         roi_captures = np.transpose(roi_captures, axes=(0,2,1,3,4))
         roi_captures = np.reshape(roi_captures, newshape=(number_of_captures * number_of_frames, number_of_chips, number_of_sources, number_of_bins))
         
+        # Update number of frames and number of captures after flattening
+        number_of_captures = number_of_captures * number_of_frames
+        number_of_frames = 1
+        
         # Capture modification
         if capture_window_defined:
             # Pull out only captures that we need
