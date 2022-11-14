@@ -162,11 +162,11 @@ def prepare_for_reconstruction(capture_window = None):
         ddict['functional_detectors'] = working_detectors_matlab
         ddict['functional_sources'] = working_sources_matlab
         ddict['number_of_bins'] = number_of_bins
-        # ddict['roi_w'] = ts['ROI Size']
-        # ddict['roi_l'] = ts['ROI Size']
+        ddict['roi_w'] = ts['ROI Size']
+        ddict['roi_l'] = ts['ROI Size']
         # ddict['roi_h'] = 5
         # ddict['roi_ua'] = float(ts['ROI ua'])
-        ddict['laser_wavelength'] = int(ts['Laser Wavelength'])
+        # ddict['laser_wavelength'] = int(ts['Laser Wavelength'])
         
         # Filename
         if capture_window_specified:
@@ -250,11 +250,11 @@ If source is not found in functional_sources, this means that the source was not
                             functional_sources = working_sources, \
                             functional_detectors = working_detectors, \
                             number_of_bins = number_of_bins, \
-                            # roi_w = ts['ROI Size'], \
-                            # roi_l = ts['ROI Size'], \
+                            roi_w = ts['ROI Size'], \
+                            roi_l = ts['ROI Size'], \
                             # roi_h = 5, \
                             # roi_ua = float(ts['ROI ua']), \
-                            laser_wavelength = int(ts['Laser Wavelength']) \
+                            # laser_wavelength = int(ts['Laser Wavelength']) \
                             )
         
         # Create readme string

@@ -69,10 +69,10 @@ def roi_contrast_to_noise(bkg_key, roi_key, capture_window=None, data_dir_prefix
     pair_count = 0
     
     # Pair directories
-    for d in reduced_dir_list:
+    for i, d in enumerate(reduced_dir_list):
         
         # Only process and find roi directories to match with background
-        if bkg_key in d:
+        if bkg_key in dir_list[i]:
             continue
         
         # Create index list, which lists indexes of the directories that match d
@@ -92,8 +92,8 @@ def roi_contrast_to_noise(bkg_key, roi_key, capture_window=None, data_dir_prefix
         # Increment pair counter
         pair_count = pair_count + 1
         
-        # Create time axis
-        t_ns = np.arange(0,150)*0.065
+    # Create time axis
+    t_ns = np.arange(0,150)*0.065
         
     # Main contrast loop
     for p in range(len(dir_pairs)):
