@@ -4,11 +4,14 @@ from KeysightE36312A import *
 from copy import deepcopy
 
 for w in ('nir','ir'):
-    
     # Create list of setting/bias pairs
-    l = ( (3, 0.4), (3, 0.7), (4, 0.8) )
-    
+    if w == 'nir':
+        l = ( (3, 0.4), (4, 0.4), (4, 0.8) )
+    else:
+        l = ( (1, 0.9), (2, 1.0), (3, 1.0) ) 
+        
     for vs, sv in l:
+    
         if True:
     # for sv in np.arange (4,12,4,dtype = int)/10:
             # =============================================================================
@@ -30,8 +33,8 @@ for w in ('nir','ir'):
             time_gate_list = [0.0, ]
             
             # Phantom setting
-            thickness                           = 6 
-            size                                = 5 
+            size                                = 3 
+            spacing                             = 3
             location                            = "bkg"
             number                              = 13      
             ua                                  = 0.934
@@ -44,9 +47,9 @@ for w in ('nir','ir'):
             voltage                             = vcsel_bias
             
             # Test conditions to propagate to log file
-            conditions = "thickness" + str(thickness) + "mm" + "_" + \
+            conditions = str(location) + "_" + \
                          "size" + str(size).replace(".","p") + "mm" + "_" + \
-                         "location" + str(location) + "_" + \
+                         "spacing" + str(spacing) + "_" + \
                          "setting" + str(vcsel_setting) + "_" + \
                          "bias" + str(vcsel_bias).replace(".", "p") + "V"
                
@@ -177,7 +180,7 @@ for w in ('nir','ir'):
                 if logging:
                     
                     # Create the results directory
-                    results_dir = '../../data/blitz_phantom_intralipid_dilution/' + w +'_data/'
+                    results_dir = '../../data/blitz_spatial_resolution/' + w +'_data/'
                     if not os.path.exists(results_dir):
                         os.makedirs(results_dir)
                                     
