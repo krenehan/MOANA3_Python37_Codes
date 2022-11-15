@@ -150,7 +150,7 @@ def prepare_for_reconstruction(capture_window = None):
         t = np.linspace(0, 149, num=150, dtype=int) * 65
         
         # Calculate integration time
-        it = float(ts['Period']) * float(ts['Measurements per Pattern']) * float(ts['Number of Frames']) * number_of_captures
+        it = float(ts['Period']) * 1e-9 * float(ts['Measurements per Pattern']) * number_of_frames * number_of_captures
 
 
         ##### MATLAB #####
