@@ -80,6 +80,18 @@ def prepare_for_reconstruction(capture_window = None):
         print("Loading yield file")
         working_sources, working_detectors =  interpret_yield()
         
+        # Get shape
+        number_of_captures, number_of_chips, number_of_frames, patterns_per_frame, number_of_bins = np.shape(arr)
+        
+        # Combine the capture and frame axes
+        arr = np.transpose(arr, axes=(0, 2, 1, 3, 4))
+        arr = np.reshape(arr, newshape=(number_of_captures*number_of_frames, 1, number_of_chips, patterns_per_frame, number_of_bins))
+        arr = np.transpose(arr, axes=(0, 2, 1, 3, 4))
+        
+        # Modify number of captures and frames
+        number_of_captures = number_of_captures * number_of_frames
+        number_of_frames = 1
+        
         # If we have a custom capture window, we redefine the number of captures to be included
         if capture_window_specified:
             if capture_window[0] >= capture_window[1]:
@@ -94,11 +106,8 @@ def prepare_for_reconstruction(capture_window = None):
                 raise Exception("Second index of capture window is greater than the number of captures")
             arr = arr[capture_window[0]:capture_window[1]]
         
-        # Get shape
-        number_of_captures, number_of_chips, number_of_frames, patterns_per_frame, number_of_bins = np.shape(arr)
-        
         # Fill capture_window if not specified
-        if not capture_window_specified:
+        else:
             capture_window = (0, number_of_captures)
         
         # Average
@@ -137,7 +146,6 @@ def prepare_for_reconstruction(capture_window = None):
                     print("Skipping detector " + str(chip) + " because it is non-functional")
             print("Filled index " + str(s) + " of final array with data from pattern " + str(pattern_index))
 
-        
         # Create time axis
         t = np.linspace(0, 149, num=150, dtype=int) * 65
         
