@@ -81,7 +81,7 @@ class DynamicPacket:
             
         # Store
         self.__dynamic_frame_structure = pattern_packet
-            
+        self.dynamic_frame_structure = self.__dynamic_frame_structure
 
 
     # ====================================================
@@ -107,44 +107,41 @@ class DynamicPacket:
     def patterns_per_frame(self, new_patterns_per_frame):
         print("Cannot set patterns per frame after initialization")
         
+    
+    # ====================================================
+    # Recreate function for redefinition of dynamic frame structure
+    # ====================================================
+    def __recreate(self, new_number_of_chips, new_patterns_per_frame):
+        
+        # Reset variables
+        self.__number_of_chips = new_number_of_chips
+        self.__patterns_per_frame = new_patterns_per_frame
+        
+        # Create chip dictionary
+        chip_packet = {}
+        
+        # Fill chip dictionary with copies of packet template
+        for c in range(new_number_of_chips):
+            chip_packet[c] = self.__dynamic_packet_template.copy()
+        
+        # Create pattern dictionary
+        pattern_packet = {}
+        
+        # Fill pattern dictionary with copies of chip packet
+        for p in range(new_patterns_per_frame):
+            pattern_packet[p] = deepcopy(chip_packet)
+            
+        # Store
+        self.__dynamic_frame_structure = pattern_packet
+        
         
     # ====================================================
     # Function to show values of the dynamic frame structure
     # ====================================================
     def show(self, pattern_list='all', chip_list='all'):
         
-        # Check for pattern
-        if pattern_list == 'all':
-            pattern_list = range(self.__patterns_per_frame)
-
-        # Check for chip
-        if chip_list == 'all':
-            chip_list = range(self.__number_of_chips)
-        
-        # Check dimensions
-        if (min(pattern_list) < 0) or (max(pattern_list) > self.__patterns_per_frame):
-            raise DynamicPacketException("Pattern index out of range in call to show()")
-        if (min(chip_list) < 0) or (max(chip_list) > self.__number_of_chips):
-            raise DynamicPacketException("Chip index out of range in call to show()")
-            
-        # Print header        
-        print("------------------ Dynamic Frame Structure ------------------")
-        
-        # Print pattern info
-        for p in pattern_list:
-            print("    Pattern " + str(p) + ":")
-            
-            # Print chip info
-            for c in chip_list:
-                print("        Chip " + str(c) + ":")
-                print("            vcsel_enable          : " + self.__dynamic_frame_structure[p][c]['vcsel_enable'])
-                print("            nir_vcsel_enable      : " + self.__dynamic_frame_structure[p][c]['nir_vcsel_enable'])
-                print("            ir_vcsel_enable       : " + self.__dynamic_frame_structure[p][c]['ir_vcsel_enable'])
-                print("            driver_dll_word       : " + self.__dynamic_frame_structure[p][c]['driver_dll_word'])
-                print("            clk_flip              : " + self.__dynamic_frame_structure[p][c]['clk_flip'])
-                print("            aqc_dll_coarse_word   : " + self.__dynamic_frame_structure[p][c]['aqc_dll_coarse_word'])
-                print("            aqc_dll_fine_word     : " + self.__dynamic_frame_structure[p][c]['aqc_dll_fine_word'])
-                print("            aqc_dll_finest_word   : " + self.__dynamic_frame_structure[p][c]['aqc_dll_finest_word'])
+        # Print write
+        print(self.write(pattern_list=pattern_list, chip_list=chip_list))
                 
                 
     # ====================================================
@@ -187,6 +184,120 @@ class DynamicPacket:
                 
         # Return string
         return s
+    
+    # ====================================================
+    # Function to return string f values of the dynamic frame structure
+    # ====================================================
+    def read(self, filepath):
+        
+        # Get value from line
+        def get_val(s):
+            v = s.split(":")
+            if len(v) < 2:
+                return False, ''
+            else:
+                v = v[1].strip()
+                return True, v
+        
+        # Open file and read lines
+        f = open(filepath, 'r')
+        ll = f.readlines() 
+        f.close()
+        
+        # Interpret
+        print("Interpreting emitter pattern file")
+        
+        # Find number of patterns
+        for l in ll[::-1]:
+            if "Pattern" in l:
+                patterns_per_frame = int(l.split("Pattern ")[1].split(':')[0]) + 1
+                break
+        
+        # Find number of chips
+        for l in ll[::-1]:
+            if "Chip" in l:
+                number_of_chips = int(l.split("Chip ")[1].split(':')[0]) + 1
+                break
+            
+        if (patterns_per_frame != self.__patterns_per_frame) or (number_of_chips != self.__number_of_chips):
+            self.__recreate(number_of_chips, patterns_per_frame)
+        
+        # Find the dynamic pattern for each chip and each pattern
+        for i, l in enumerate(ll):
+            
+            # Keep track of the pattern number
+            if "Pattern" in l:
+                pattern = int(l.split("Pattern ")[1].split(':')[0])
+                continue
+            
+            # Keep track of the chip number
+            if "Chip" in l:
+                chip = int(l.split("Chip ")[1].split(':')[0])
+                continue
+            
+            # Find nir_vcsel_enable
+            if "nir_vcsel_enable" in l:
+                succ, val = get_val(l)
+                if succ:
+                    self.__dynamic_frame_structure[pattern][chip]['nir_vcsel_enable'] = val
+                # print("nir_vcsel_enable found in line {} for pattern {} chip {}".format(i, pattern, chip))
+                continue
+            
+            # Find ir_vcsel_enable
+            if "ir_vcsel_enable" in l:
+                succ, val = get_val(l)
+                if succ:
+                    self.__dynamic_frame_structure[pattern][chip]['ir_vcsel_enable'] = val
+                # print("ir_vcsel_enable found in line {} for pattern {} chip {}".format(i, pattern, chip))
+                continue
+            
+            # Find vcsel_enable
+            if "vcsel_enable" in l:
+                succ, val = get_val(l)
+                if succ:
+                    self.__dynamic_frame_structure[pattern][chip]['vcsel_enable'] = val
+                # print("vcsel_enable found in line {} for pattern {} chip {}".format(i, pattern, chip))
+                continue
+            
+            # Find driver_dll_word
+            if "driver_dll_word" in l:
+                succ, val = get_val(l)
+                if succ:
+                    self.__dynamic_frame_structure[pattern][chip]['driver_dll_word'] = val
+                # print("driver_dll_word found in line {} for pattern {} chip {}".format(i, pattern, chip))
+                continue
+            
+            # Find clk_flip
+            if "clk_flip" in l:
+                succ, val = get_val(l)
+                if succ:
+                    self.__dynamic_frame_structure[pattern][chip]['clk_flip'] = val
+                # print("clk_flip found in line {} for pattern {} chip {}".format(i, pattern, chip))
+                continue
+            
+            # Find aqc_dll_coarse_word
+            if "aqc_dll_coarse_word" in l:
+                succ, val = get_val(l)
+                if succ:
+                    self.__dynamic_frame_structure[pattern][chip]['aqc_dll_coarse_word'] = val
+                # print("aqc_dll_coarse_word found in line {} for pattern {} chip {}".format(i, pattern, chip))
+                continue
+            
+            # Find aqc_dll_fine_word
+            if "aqc_dll_fine_word" in l:
+                succ, val = get_val(l)
+                if succ:
+                    self.__dynamic_frame_structure[pattern][chip]['aqc_dll_fine_word'] = val
+                # print("aqc_dll_fine_word found in line {} for pattern {} chip {}".format(i, pattern, chip))
+                continue
+            
+            # Find aqc_dll_finest_word
+            if "aqc_dll_finest_word" in l:
+                succ, val = get_val(l)
+                if succ:
+                    self.__dynamic_frame_structure[pattern][chip]['aqc_dll_finest_word'] = val
+                # print("aqc_dll_finest_word found in line {} for pattern {} chip {}".format(i, pattern, chip))
+                continue
     
     
     # ====================================================
@@ -310,11 +421,9 @@ if __name__ == "__main__":
     
     # Create the pipe in
     b = a.create_pipe_in()
+    
+    # Read file
+    a.read("C:\\Users\\Dell-User\\Dropbox\\MOANA\\Python\\MOANA3_Python37_Codes\\chips\\moana3\\data\\rigid_4by4_hbo2_testing\\data\\nirsetting4_0p8Virsetting3_1p0V_Trial3\\dynamic_packet.txt")
 
-    
-    
-    
-    
-    
     
     
