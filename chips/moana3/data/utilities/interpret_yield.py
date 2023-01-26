@@ -14,7 +14,8 @@ def interpret_yield():
     
     # Sources and detectors
     d = None
-    s = None
+    nir_s = None
+    ir_s = None
     
     for l in ll:
         
@@ -25,10 +26,17 @@ def interpret_yield():
             d = [int(t[i]) for i in range(len(t))]
                 
             
-        elif 'sources' in l:
+        elif 'nir_sources' in l:
             
             # Process line
             t = l.split('=')[1].split(',')
-            s = [int(t[i]) for i in range(len(t))]
+            nir_s = [int(t[i]) for i in range(len(t))]
             
-    return s, d
+            
+        elif 'ir_sources' in l:
+            
+            # Process line
+            t = l.split('=')[1].split(',')
+            ir_s = [int(t[i]) for i in range(len(t))]
+            
+    return nir_s, ir_s, d
