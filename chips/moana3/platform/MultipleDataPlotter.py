@@ -786,7 +786,7 @@ class MultipleDataPlotter:
     # ===========================================================
     # Passing the time gate settings for the current frame and the data displays a plot of the current counts
     # ===========================================================
-    def update_plot(self, manual_input=None, use_manual_input=False):
+    def update_plot(self, manual_input=None, use_manual_input=False, pattern_to_plot=0):
         
         # Fast mode overrides settings
         if self.fast_mode:
@@ -813,7 +813,7 @@ class MultipleDataPlotter:
             # Fill capture data structure
             for chip in range(self.__number_of_chips):
                 if not (chip in self.__muted_chips):
-                    self.__capture_data[chip] = self.__full_capture_data[chip][0][0]
+                    self.__capture_data[chip] = self.__full_capture_data[chip][0][pattern_to_plot]
                     
         # Fill the counts structure
         if self.show_plot_info:

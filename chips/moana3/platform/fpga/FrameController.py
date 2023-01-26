@@ -233,6 +233,9 @@ class FrameController:
         
         # Start stream process
         self.__unset_blitz_mode()
+            
+        # Release scan done
+        self.__unset_scan_done()
 
         
         
@@ -495,6 +498,7 @@ class FrameController:
     # Send the frame data
     # ====================================================
     def __run_send_frame_data(self):
+        attempts=0
         
         # Send frame data and verify that it is received
         while True:
@@ -506,8 +510,10 @@ class FrameController:
             if (self.check_frame_data_received()):
                 self.__unset_frame_data_sent()
                 break
+            elif attempts > 1000:
+                raise FrameControllerError("Frame data not received")
             else:
-                pass
+                attempts=attempts+1
                 # raise FrameControllerError("Frame data not received")
         
         
