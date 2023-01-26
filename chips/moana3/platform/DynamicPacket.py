@@ -145,6 +145,48 @@ class DynamicPacket:
                 print("            aqc_dll_coarse_word   : " + self.__dynamic_frame_structure[p][c]['aqc_dll_coarse_word'])
                 print("            aqc_dll_fine_word     : " + self.__dynamic_frame_structure[p][c]['aqc_dll_fine_word'])
                 print("            aqc_dll_finest_word   : " + self.__dynamic_frame_structure[p][c]['aqc_dll_finest_word'])
+                
+                
+    # ====================================================
+    # Function to return string f values of the dynamic frame structure
+    # ====================================================
+    def write(self, pattern_list='all', chip_list='all'):
+        
+        # Check for pattern
+        if pattern_list == 'all':
+            pattern_list = range(self.__patterns_per_frame)
+
+        # Check for chip
+        if chip_list == 'all':
+            chip_list = range(self.__number_of_chips)
+        
+        # Check dimensions
+        if (min(pattern_list) < 0) or (max(pattern_list) > self.__patterns_per_frame):
+            raise DynamicPacketException("Pattern index out of range in call to show()")
+        if (min(chip_list) < 0) or (max(chip_list) > self.__number_of_chips):
+            raise DynamicPacketException("Chip index out of range in call to show()")
+            
+        # Print header        
+        s = "------------------ Dynamic Frame Structure ------------------" + '\n'
+        
+        # Print pattern info
+        for p in pattern_list:
+            s = s + "    Pattern " + str(p) + ":" + '\n'
+            
+            # Print chip info
+            for c in chip_list:
+                s = s + "        Chip " + str(c) + ":" + '\n'
+                s = s + "            vcsel_enable          : " + self.__dynamic_frame_structure[p][c]['vcsel_enable'] + '\n'
+                s = s + "            nir_vcsel_enable      : " + self.__dynamic_frame_structure[p][c]['nir_vcsel_enable'] + '\n'
+                s = s + "            ir_vcsel_enable       : " + self.__dynamic_frame_structure[p][c]['ir_vcsel_enable'] + '\n'
+                s = s + "            driver_dll_word       : " + self.__dynamic_frame_structure[p][c]['driver_dll_word'] + '\n'
+                s = s + "            clk_flip              : " + self.__dynamic_frame_structure[p][c]['clk_flip'] + '\n'
+                s = s + "            aqc_dll_coarse_word   : " + self.__dynamic_frame_structure[p][c]['aqc_dll_coarse_word'] + '\n'
+                s = s + "            aqc_dll_fine_word     : " + self.__dynamic_frame_structure[p][c]['aqc_dll_fine_word'] + '\n'
+                s = s + "            aqc_dll_finest_word   : " + self.__dynamic_frame_structure[p][c]['aqc_dll_finest_word'] + '\n'
+                
+        # Return string
+        return s
     
     
     # ====================================================
