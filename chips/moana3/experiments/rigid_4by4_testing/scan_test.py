@@ -26,7 +26,7 @@ row         = ['chip_row_'+ str(i) for i in range(number_of_chips)]
 cell        = 'multicell_0'
 
 # Number of times to scan data in and out
-number_of_scans = 2
+number_of_scans = 1
 
 # Enable or disable logging to file
 Logging = False
