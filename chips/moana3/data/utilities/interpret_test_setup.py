@@ -41,7 +41,11 @@ def interpret_test_setup():
         ldict = {}
         l = f.readlines()
         for line in l:
-            prefix, suffix = line.split(": ", 1)
+            s = line.split(": ", 1)
+            if len(s) != 2:
+                continue
+            else:
+                prefix, suffix = s
             suffix = suffix.split('\n')[0]
             ldict[prefix] = suffix
         
