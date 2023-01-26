@@ -19,8 +19,10 @@ def patch_geometry():
     cols = 4
     
     # Position arrays
-    src_pos_x = np.zeros( (rows * cols,), dtype=float)
-    src_pos_y = np.zeros( (rows * cols,), dtype=float)
+    nir_src_pos_x = np.zeros( (rows * cols,), dtype=float)
+    nir_src_pos_y = np.zeros( (rows * cols,), dtype=float)
+    ir_src_pos_x = np.zeros( (rows * cols,), dtype=float)
+    ir_src_pos_y = np.zeros( (rows * cols,), dtype=float)
     det_pos_x = np.zeros( (rows * cols,), dtype=float)
     det_pos_y = np.zeros( (rows * cols,), dtype=float)
     
@@ -28,7 +30,7 @@ def patch_geometry():
     pitch = 8
     
     # Offset
-    det_offset_x = 0.2975
+    src_offset_x = 0.2975
     det_offset_y =  -0.6525
     
     # Array is centered in scene
@@ -51,21 +53,26 @@ def patch_geometry():
             
             # x position for col
             x = scene_extent_x[1] - x_margin - c * pitch
-        
-            # Source position
-            src_pos_x[flat_idx] = x
-            src_pos_y[flat_idx] = y
             
             # Detector position
-            det_pos_x[flat_idx] = x + det_offset_x
+            det_pos_x[flat_idx] = x
             det_pos_y[flat_idx] = y + det_offset_y
+        
+            # Source position
+            nir_src_pos_x[flat_idx] = x - src_offset_x
+            nir_src_pos_y[flat_idx] = y
+            
+            # Source position
+            ir_src_pos_x[flat_idx] = x + src_offset_x
+            ir_src_pos_y[flat_idx] = y
             
             # Increment flat index
             flat_idx += 1 
             
     # Plot for verification
     print("Plotting source/detector positions")
-    plt.scatter(src_pos_x, src_pos_y)
+    plt.scatter(nir_src_pos_x, nir_src_pos_y, color='red')
+    plt.scatter(ir_src_pos_x, nir_src_pos_y, color='purple')
     plt.scatter(det_pos_x, det_pos_y)
     plt.xlim(scene_extent_x)
     plt.ylim(scene_extent_y)
@@ -73,17 +80,19 @@ def patch_geometry():
     
     # Save the mat file
     print("Saving .mat file")
-    mdict = {'src_pos_x': src_pos_x, 'src_pos_y': src_pos_y, 'det_pos_x': det_pos_x, 'det_pos_y': det_pos_y}
+    mdict = {'nir_src_pos_x': nir_src_pos_x, 'nir_src_pos_y': nir_src_pos_y, 'ir_src_pos_x': ir_src_pos_x, 'ir_src_pos_y': ir_src_pos_y, 'det_pos_x': det_pos_x, 'det_pos_y': det_pos_y}
     savemat("src_det_positions.mat", mdict)
     
     # Create README
     print("Creating README")
     st = \
 '''######################### KEYS #########################
-src_pos_x   - x-coordinates of source positions in mm.
-src_pos_y   - y-coordinates of source positions in mm.
-det_pos_x   - x-coordinates of detector positions in mm.
-det_pos_y   - y-coordinates of detector positions in mm.
+nir_src_pos_x  - x-coordinates of NIR source positions in mm.
+nir_src_pos_y  - y-coordinates of NIR source positions in mm.
+ir_src_pos_x   - x-coordinates of IR source positions in mm.
+ir_src_pos_y   - y-coordinates of IR source positions in mm.
+det_pos_x      - x-coordinates of detector positions in mm.
+det_pos_y      - y-coordinates of detector positions in mm.
 
 Note that all source and detector positions assume origin in the exact center of the phantom.
 
@@ -114,8 +123,10 @@ Note that all source and detector positions assume origin in the exact center of
     print("Saving .npz file")
     np.savez_compressed ( \
                         "src_det_positions", \
-                        src_pos_x = src_pos_x, \
-                        src_pos_y = src_pos_y, \
+                        nir_src_pos_x = nir_src_pos_x, \
+                        nir_src_pos_y = nir_src_pos_y, \
+                        ir_src_pos_x = ir_src_pos_x, \
+                        ir_src_pos_y = ir_src_pos_y, \
                         det_pos_x = det_pos_x, \
                         det_pos_y = det_pos_y )
     
@@ -123,10 +134,12 @@ Note that all source and detector positions assume origin in the exact center of
     print("Creating python README")
     st = \
 '''######################### KEYS #########################
-src_pos_x   - x-coordinates of source positions in mm.
-src_pos_y   - y-coordinates of source positions in mm.
-det_pos_x   - x-coordinates of detector positions in mm.
-det_pos_y   - y-coordinates of detector positions in mm.
+nir_src_pos_x  - x-coordinates of NIR source positions in mm.
+nir_src_pos_y  - y-coordinates of NIR source positions in mm.
+ir_src_pos_x   - x-coordinates of IR source positions in mm.
+ir_src_pos_y   - y-coordinates of IR source positions in mm.
+det_pos_x      - x-coordinates of detector positions in mm.
+det_pos_y      - y-coordinates of detector positions in mm.
 
 Note that all source and detector positions assume origin in the exact center of the phantom.
 
@@ -175,8 +188,10 @@ Note that all source and detector positions assume origin in the exact center of
 ################################################### Positions ###################################################
 '''
 
-    for i in range(len(src_pos_x)):
-        st = st + "Source {}: ({}, {})\n".format(i, src_pos_x[i], src_pos_y[i])
+    for i in range(len(nir_src_pos_x)):
+        st = st + "NIR Source {}: ({}, {})\n".format(i, nir_src_pos_x[i], nir_src_pos_y[i])
+    for i in range(len(ir_src_pos_x)):
+        st = st + "IR Source {}: ({}, {})\n".format(i, ir_src_pos_x[i], ir_src_pos_y[i])
     for i in range(len(det_pos_x)):
         st = st + "Detector {}: ({}, {})\n".format(i, det_pos_x[i], det_pos_y[i])
         
