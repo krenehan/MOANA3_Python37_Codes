@@ -10,11 +10,11 @@
     <x>0</x>
     <y>0</y>
     <width>751</width>
-    <height>639</height>
+    <height>594</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string>Test Setup Configuration</string>
   </property>
   <widget class="QLabel" name="testSetupLabel">
    <property name="geometry">
@@ -42,10 +42,10 @@
   <widget class="QLabel" name="conditionsLabel">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>570</y>
+     <x>400</x>
+     <y>90</y>
      <width>151</width>
-     <height>21</height>
+     <height>25</height>
     </rect>
    </property>
    <property name="font">
@@ -62,10 +62,10 @@
   <widget class="QPlainTextEdit" name="conditionsTextEdit">
    <property name="geometry">
     <rect>
-     <x>90</x>
-     <y>570</y>
-     <width>271</width>
-     <height>21</height>
+     <x>480</x>
+     <y>90</y>
+     <width>261</width>
+     <height>25</height>
     </rect>
    </property>
    <property name="font">
@@ -76,12 +76,15 @@
    <property name="verticalScrollBarPolicy">
     <enum>Qt::ScrollBarAlwaysOff</enum>
    </property>
+   <property name="centerOnScroll">
+    <bool>true</bool>
+   </property>
   </widget>
   <widget class="QLabel" name="controlSettingsLabel">
    <property name="geometry">
     <rect>
-     <x>46</x>
-     <y>70</y>
+     <x>50</x>
+     <y>50</y>
      <width>301</width>
      <height>21</height>
     </rect>
@@ -99,216 +102,11 @@
     <set>Qt::AlignCenter</set>
    </property>
   </widget>
-  <widget class="QLabel" name="externalSettingsLabel">
-   <property name="geometry">
-    <rect>
-     <x>40</x>
-     <y>350</y>
-     <width>311</width>
-     <height>21</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <pointsize>14</pointsize>
-     <underline>true</underline>
-    </font>
-   </property>
-   <property name="text">
-    <string>External Settings</string>
-   </property>
-   <property name="alignment">
-    <set>Qt::AlignCenter</set>
-   </property>
-  </widget>
-  <widget class="QWidget" name="layoutWidget">
-   <property name="geometry">
-    <rect>
-     <x>30</x>
-     <y>380</y>
-     <width>191</width>
-     <height>171</height>
-    </rect>
-   </property>
-   <layout class="QVBoxLayout" name="verticalLayout_3">
-    <item>
-     <widget class="QLabel" name="VCSELBiasLabel">
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="frameShape">
-       <enum>QFrame::NoFrame</enum>
-      </property>
-      <property name="text">
-       <string>VCSEL Bias (V)</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="laserWavelengthLabel">
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="text">
-       <string>Laser Wavelength (nm)</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="laserPowerLabel">
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="text">
-       <string>Laser Power (mW)</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="laserBandwidthLabel">
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="text">
-       <string>Laser Bandwidth (nm)</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="fiberTypeLabel">
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="text">
-       <string>Fiber Type</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="otherEquipmentLabel">
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="text">
-       <string>Other Equipment</string>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </widget>
-  <widget class="QWidget" name="layoutWidget_2">
-   <property name="geometry">
-    <rect>
-     <x>230</x>
-     <y>380</y>
-     <width>131</width>
-     <height>171</height>
-    </rect>
-   </property>
-   <layout class="QVBoxLayout" name="verticalLayout_5">
-    <item>
-     <widget class="QPlainTextEdit" name="VCSELBiasTextEdit">
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
-      <property name="verticalScrollBarPolicy">
-       <enum>Qt::ScrollBarAlwaysOff</enum>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPlainTextEdit" name="laserWavelengthTextEdit">
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
-      <property name="verticalScrollBarPolicy">
-       <enum>Qt::ScrollBarAlwaysOff</enum>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPlainTextEdit" name="laserPowerTextEdit">
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
-      <property name="verticalScrollBarPolicy">
-       <enum>Qt::ScrollBarAlwaysOff</enum>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPlainTextEdit" name="laserBandwidthTextEdit">
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
-      <property name="verticalScrollBarPolicy">
-       <enum>Qt::ScrollBarAlwaysOff</enum>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPlainTextEdit" name="fiberTypeTextEdit">
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
-      <property name="verticalScrollBarPolicy">
-       <enum>Qt::ScrollBarAlwaysOff</enum>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPlainTextEdit" name="otherEquipmentTextEdit">
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
-      <property name="verticalScrollBarPolicy">
-       <enum>Qt::ScrollBarAlwaysOff</enum>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </widget>
   <widget class="QLabel" name="testSettingsLabel">
    <property name="geometry">
     <rect>
      <x>410</x>
-     <y>70</y>
+     <y>50</y>
      <width>311</width>
      <height>21</height>
     </rect>
@@ -330,9 +128,9 @@
    <property name="geometry">
     <rect>
      <x>400</x>
-     <y>100</y>
+     <y>120</y>
      <width>191</width>
-     <height>261</height>
+     <height>151</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -368,7 +166,7 @@
      </widget>
     </item>
     <item>
-     <widget class="QLabel" name="testGeometryLabel">
+     <widget class="QLabel" name="deviceIDLabel">
       <property name="font">
        <font>
         <pointsize>10</pointsize>
@@ -377,7 +175,7 @@
        </font>
       </property>
       <property name="text">
-       <string>Test Geometry</string>
+       <string>Device ID</string>
       </property>
      </widget>
     </item>
@@ -409,71 +207,15 @@
       </property>
      </widget>
     </item>
-    <item>
-     <widget class="QLabel" name="phantomLabel">
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="text">
-       <string>Phantom Number</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="solutionLabel">
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="text">
-       <string>Solution Number</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="ROISizeLabel">
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="text">
-       <string>ROI Size (mm)</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="ROIuaLabel">
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="text">
-       <string>ROI uA</string>
-      </property>
-     </widget>
-    </item>
    </layout>
   </widget>
   <widget class="QWidget" name="layoutWidget_4">
    <property name="geometry">
     <rect>
      <x>600</x>
-     <y>100</y>
-     <width>131</width>
-     <height>261</height>
+     <y>120</y>
+     <width>139</width>
+     <height>381</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout_7">
@@ -484,6 +226,23 @@
         <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
+      <property name="acceptDrops">
+       <bool>true</bool>
+      </property>
+      <property name="verticalScrollBarPolicy">
+       <enum>Qt::ScrollBarAlwaysOff</enum>
+      </property>
+      <property name="horizontalScrollBarPolicy">
+       <enum>Qt::ScrollBarAsNeeded</enum>
+      </property>
+      <property name="centerOnScroll">
+       <bool>true</bool>
       </property>
      </widget>
     </item>
@@ -503,10 +262,13 @@
       <property name="verticalScrollBarPolicy">
        <enum>Qt::ScrollBarAlwaysOff</enum>
       </property>
+      <property name="centerOnScroll">
+       <bool>true</bool>
+      </property>
      </widget>
     </item>
     <item>
-     <widget class="QPlainTextEdit" name="testGeometryTextEdit">
+     <widget class="QPlainTextEdit" name="deviceIDTextEdit">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
         <horstretch>0</horstretch>
@@ -520,6 +282,9 @@
       </property>
       <property name="verticalScrollBarPolicy">
        <enum>Qt::ScrollBarAlwaysOff</enum>
+      </property>
+      <property name="centerOnScroll">
+       <bool>true</bool>
       </property>
      </widget>
     </item>
@@ -539,6 +304,9 @@
       <property name="verticalScrollBarPolicy">
        <enum>Qt::ScrollBarAlwaysOff</enum>
       </property>
+      <property name="centerOnScroll">
+       <bool>true</bool>
+      </property>
      </widget>
     </item>
     <item>
@@ -551,138 +319,23 @@
       <property name="verticalScrollBarPolicy">
        <enum>Qt::ScrollBarAlwaysOff</enum>
       </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPlainTextEdit" name="phantomTextEdit">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
-      <property name="verticalScrollBarPolicy">
-       <enum>Qt::ScrollBarAlwaysOff</enum>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPlainTextEdit" name="solutionTextEdit">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
-      <property name="verticalScrollBarPolicy">
-       <enum>Qt::ScrollBarAlwaysOff</enum>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPlainTextEdit" name="ROISizeTextEdit">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
-      <property name="verticalScrollBarPolicy">
-       <enum>Qt::ScrollBarAlwaysOff</enum>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPlainTextEdit" name="ROIuaTextEdit">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
-      <property name="verticalScrollBarPolicy">
-       <enum>Qt::ScrollBarAlwaysOff</enum>
+      <property name="centerOnScroll">
+       <bool>true</bool>
       </property>
      </widget>
     </item>
    </layout>
   </widget>
-  <widget class="QLabel" name="derivedSettingsLabel">
-   <property name="geometry">
-    <rect>
-     <x>410</x>
-     <y>380</y>
-     <width>311</width>
-     <height>21</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <pointsize>14</pointsize>
-     <underline>true</underline>
-    </font>
-   </property>
-   <property name="text">
-    <string>Constant or Derived Settings</string>
-   </property>
-   <property name="alignment">
-    <set>Qt::AlignCenter</set>
-   </property>
-  </widget>
   <widget class="QWidget" name="layoutWidget_5">
    <property name="geometry">
     <rect>
      <x>600</x>
-     <y>410</y>
+     <y>320</y>
      <width>131</width>
-     <height>141</height>
+     <height>150</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout_8">
-    <item>
-     <widget class="QPlainTextEdit" name="SPADVoltageTextEdit">
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
-      <property name="verticalScrollBarPolicy">
-       <enum>Qt::ScrollBarAlwaysOff</enum>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPlainTextEdit" name="VRSTVoltageTextEdit">
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
-      <property name="verticalScrollBarPolicy">
-       <enum>Qt::ScrollBarAlwaysOff</enum>
-      </property>
-     </widget>
-    </item>
     <item>
      <widget class="QPlainTextEdit" name="SubtractorValueTextEdit">
       <property name="enabled">
@@ -698,21 +351,6 @@
       </property>
       <property name="readOnly">
        <bool>true</bool>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPlainTextEdit" name="subtractorOffsetTextEdit">
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
-      <property name="verticalScrollBarPolicy">
-       <enum>Qt::ScrollBarAlwaysOff</enum>
-      </property>
-      <property name="readOnly">
-       <bool>false</bool>
       </property>
      </widget>
     </item>
@@ -737,43 +375,12 @@
    <property name="geometry">
     <rect>
      <x>400</x>
-     <y>410</y>
+     <y>320</y>
      <width>191</width>
-     <height>141</height>
+     <height>61</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout_9">
-    <item>
-     <widget class="QLabel" name="SPADVoltageLabel">
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="frameShape">
-       <enum>QFrame::NoFrame</enum>
-      </property>
-      <property name="text">
-       <string>SPAD Voltage (V)</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="VRSTVoltageLabel">
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="text">
-       <string>VRST Voltage (V)</string>
-      </property>
-     </widget>
-    </item>
     <item>
      <widget class="QLabel" name="subtractorValueLabel">
       <property name="font">
@@ -785,20 +392,6 @@
       </property>
       <property name="text">
        <string>Subtractor Value</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="subtractorOffsetLabel">
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="text">
-       <string>Subtractor Offset</string>
       </property>
      </widget>
     </item>
@@ -818,53 +411,13 @@
     </item>
    </layout>
   </widget>
-  <widget class="QPushButton" name="updateTestSetupButton">
-   <property name="geometry">
-    <rect>
-     <x>560</x>
-     <y>560</y>
-     <width>171</width>
-     <height>31</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <pointsize>12</pointsize>
-     <weight>75</weight>
-     <bold>true</bold>
-    </font>
-   </property>
-   <property name="text">
-    <string>Update Test Setup</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="createTestPatternButton">
-   <property name="geometry">
-    <rect>
-     <x>380</x>
-     <y>560</y>
-     <width>171</width>
-     <height>31</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <pointsize>12</pointsize>
-     <weight>75</weight>
-     <bold>true</bold>
-    </font>
-   </property>
-   <property name="text">
-    <string>Create Test Pattern</string>
-   </property>
-  </widget>
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>30</x>
-     <y>100</y>
+     <y>90</y>
      <width>191</width>
-     <height>201</height>
+     <height>291</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
@@ -896,20 +449,6 @@
       </property>
       <property name="text">
        <string>Clock Frequency (MHz)</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLabel" name="vcselSettingLabel">
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="text">
-       <string>VCSEL Setting</string>
       </property>
      </widget>
     </item>
@@ -969,18 +508,83 @@
       </property>
      </widget>
     </item>
+    <item>
+     <widget class="QLabel" name="NIRVCSELBiasLabel">
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::NoFrame</enum>
+      </property>
+      <property name="text">
+       <string>NIR VCSEL Bias (V)</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="IRVCSELBiasLabel">
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::NoFrame</enum>
+      </property>
+      <property name="text">
+       <string>IR VCSEL Bias (V)</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="subtractorOffsetLabel">
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string>Subtractor Offset</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QLabel" name="padCapturedMaskLabel">
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string>Pad Captured Mask</string>
+      </property>
+     </widget>
+    </item>
    </layout>
   </widget>
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>230</x>
-     <y>100</y>
+     <y>90</y>
      <width>131</width>
-     <height>201</height>
+     <height>766</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout_2">
+    <property name="sizeConstraint">
+     <enum>QLayout::SetDefaultConstraint</enum>
+    </property>
     <item>
      <widget class="QPlainTextEdit" name="capturesTextEdit">
       <property name="font">
@@ -995,18 +599,6 @@
     </item>
     <item>
      <widget class="QPlainTextEdit" name="clkFreqTextEdit">
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
-      <property name="verticalScrollBarPolicy">
-       <enum>Qt::ScrollBarAlwaysOff</enum>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPlainTextEdit" name="VCSELSettingTextEdit">
       <property name="font">
        <font>
         <pointsize>10</pointsize>
@@ -1065,35 +657,78 @@
       </property>
      </widget>
     </item>
+    <item>
+     <widget class="QPlainTextEdit" name="NIRVCSELBiasTextEdit">
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
+      <property name="verticalScrollBarPolicy">
+       <enum>Qt::ScrollBarAlwaysOff</enum>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPlainTextEdit" name="IRVCSELBiasTextEdit">
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
+      <property name="verticalScrollBarPolicy">
+       <enum>Qt::ScrollBarAlwaysOff</enum>
+      </property>
+      <property name="centerOnScroll">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPlainTextEdit" name="subtractorOffsetTextEdit">
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
+      <property name="verticalScrollBarPolicy">
+       <enum>Qt::ScrollBarAlwaysOff</enum>
+      </property>
+      <property name="readOnly">
+       <bool>false</bool>
+      </property>
+      <property name="centerOnScroll">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPlainTextEdit" name="padCapturedMaskTextEdit">
+      <property name="font">
+       <font>
+        <pointsize>10</pointsize>
+       </font>
+      </property>
+      <property name="verticalScrollBarPolicy">
+       <enum>Qt::ScrollBarAlwaysOff</enum>
+      </property>
+      <property name="readOnly">
+       <bool>false</bool>
+      </property>
+      <property name="centerOnScroll">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
    </layout>
-  </widget>
-  <widget class="QPushButton" name="loadTestSetupButton">
-   <property name="geometry">
-    <rect>
-     <x>560</x>
-     <y>10</y>
-     <width>171</width>
-     <height>31</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <pointsize>12</pointsize>
-     <weight>75</weight>
-     <bold>true</bold>
-    </font>
-   </property>
-   <property name="text">
-    <string>Load Test Setup</string>
-   </property>
   </widget>
   <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>30</x>
-     <y>300</y>
+     <y>390</y>
      <width>331</width>
-     <height>40</height>
+     <height>51</height>
     </rect>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -1153,25 +788,161 @@
     <string>Logging Enabled</string>
    </property>
   </widget>
-  <widget class="QCheckBox" name="streamModeCheckBox">
+  <widget class="QLabel" name="derivedSettingsLabel">
    <property name="geometry">
     <rect>
-     <x>30</x>
-     <y>30</y>
-     <width>131</width>
+     <x>410</x>
+     <y>280</y>
+     <width>311</width>
      <height>31</height>
     </rect>
    </property>
    <property name="font">
     <font>
-     <pointsize>10</pointsize>
-     <weight>75</weight>
-     <bold>true</bold>
+     <pointsize>14</pointsize>
+     <underline>true</underline>
     </font>
    </property>
    <property name="text">
-    <string>Stream Mode</string>
+    <string>Derived Settings</string>
    </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
+   </property>
+  </widget>
+  <widget class="QWidget" name="horizontalLayoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>450</y>
+     <width>701</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <layout class="QHBoxLayout" name="horizontalLayout">
+    <item>
+     <widget class="QPushButton" name="loadTestSetupButton">
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string>Load Test Setup</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="loadDynamicPatternButton">
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string>Load Dynamic Packet</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="loadYieldButton">
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string>Load Yield</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="horizontalLayoutWidget_2">
+   <property name="geometry">
+    <rect>
+     <x>500</x>
+     <y>550</y>
+     <width>231</width>
+     <height>31</height>
+    </rect>
+   </property>
+   <layout class="QHBoxLayout" name="horizontalLayout_2">
+    <item>
+     <widget class="QPushButton" name="updateTestSetupButton">
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string>Update</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="horizontalLayoutWidget_3">
+   <property name="geometry">
+    <rect>
+     <x>30</x>
+     <y>490</y>
+     <width>701</width>
+     <height>41</height>
+    </rect>
+   </property>
+   <layout class="QHBoxLayout" name="horizontalLayout_4">
+    <item>
+     <widget class="QPushButton" name="editTestSetupButton">
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string>Direct Edit Test Setup</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="verifyDynamicPacketButton">
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string>Verify Dynamic Packet</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="editYieldButton">
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+        <weight>75</weight>
+        <bold>true</bold>
+       </font>
+      </property>
+      <property name="text">
+       <string>Direct Edit Yield</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
   </widget>
  </widget>
  <resources/>

@@ -1,16 +1,14 @@
 # System includes
 import sys
 import os
-import matplotlib.pyplot as p
 import time
 import binascii
 import datetime
 import pickle
 import math
 import numpy as np
-#from numpy import *
 
-chip_name = "moana2"
+chip_name = "moana3"
 experimental_dir = "../../.."
 
 # Create a class that holds testing paths, to avoid polluting global namespace
@@ -30,10 +28,12 @@ class TestingPaths:
 
         # Bitfile path
         self.bitfile_path = os.path.join(os.path.join(os.path.join(self.platform_dir, "fpga"), "bit_files"), \
-            "MOANA2_v2p1_flex4x4_INTERNAL_CLOCKS_6MHz_block.bit")
-            # "MOANA2_v2p1_flex4x4_INTERNAL_CLOCKS_6MHz_old.bit")
-
-
+            # 'MOANA3_INTERNAL_CLOCKS_50MHz_nopadreverse.bit') # Uncomment line for internal clock
+            # 'MOANA3_INTERNAL_CLOCKS_50MHz_noreverse.bit') # Uncomment line for internal clock
+            # 'MOANA3_INTERNAL_CLOCKS_50MHz_fullchain.bit') # Uncomment line for internal clock
+            # 'MOANA3_INTERNAL_CLOCKS_VAR_fullchain.bit')
+            'MOANA3_RIGID4BY4_INTERNAL_CLOCKS_6MHz.bit')
+            # 'MOANA3_EXTERNAL_REFCLK.bit') # Uncomment line for external laser clock
 
 
 
@@ -54,33 +54,17 @@ class TestingPaths:
             TestingPaths.get_subdirectories(self.experiment_dir)
 
 # Global variable with all the testing paths
-paths = TestingPaths(chip_name = "moana2", experimental_dir = "../../../../")
+paths = TestingPaths(chip_name = "moana3", experimental_dir = "../../../../")
 
 # Include Equipment
 #import  Agilent8133A
-#import  Agilent81600B
-#import  Keithley2000
-#import  Keithley2400
-#import  Agilent3631A
-#import  Agilent3640A
-#import  Agilent3648A
-#import  Agilent83480A
-#import  Agilent81134A
-#import  Agilent81142A
 
 # Platform and helpers
+import MoanaGui
 import test_platform
 import infrastructure
 import interface
 import MultipleDataPlotter
-import MoanaGui
 import DataPacket
-from support import *
-
-# Configuration helpers
-from constants import *
-import constants
-import prbs
-import freq_measure
-
+import DynamicPacket
 
