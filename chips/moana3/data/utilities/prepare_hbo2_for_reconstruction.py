@@ -26,6 +26,11 @@ def prepare_hbo2_for_reconstruction(capture_window = None):
         capture_window_specified = False
     else:
         capture_window_specified = True
+    
+    # Occlusion window
+    breath_hold_window = np.array((600, 900), dtype=int)
+    if capture_window_specified:
+        breath_hold_window = breath_hold_window - capture_window[0]
 
     # Directory info
     l = os.listdir()
@@ -36,7 +41,7 @@ def prepare_hbo2_for_reconstruction(capture_window = None):
             
     
     # Look for previously generated accumulated file
-    print("Searching for zipped captures file, emitter pattern file, test setup, and yield file")
+    print("Searching for zipped captures file, dynamic packet file, test setup, and yield file")
     found = True
         
     # Look for captures file
@@ -49,10 +54,10 @@ def prepare_hbo2_for_reconstruction(capture_window = None):
         
     # Look for emitter pattern file
     if 'dynamic_packet.txt' not in filelist:
-        print("Could not find emitter pattern file")
+        print("Could not find dynamic packet file")
         found = False
     else:
-        print("Found emitter pattern file")
+        print("Found dynamic packet file")
         
     # Look for test setup file
     if 'test_setup.txt' not in filelist:
@@ -121,6 +126,7 @@ def prepare_hbo2_for_reconstruction(capture_window = None):
             if capture_window[1] > len(arr):
                 raise Exception("Second index of capture window is greater than the number of captures")
             arr = arr[capture_window[0]:capture_window[1]]
+            number_of_captures = capture_window[1] - capture_window[0]
         
         # Fill capture_window if not specified
         else:
@@ -219,7 +225,7 @@ def prepare_hbo2_for_reconstruction(capture_window = None):
     ddict['capture_rate'] = fps
     ddict['number_of_captures'] = number_of_captures
     ddict['capture_window'] = (capture_window[0]+1, capture_window[1]+1)
-    ddict['occlusion_window'] = (1501, 1801)
+    ddict['breath_hold_window'] = (breath_hold_window[0] + 1, breath_hold_window[1] + 1)
     ddict['number_of_detector_locations'] = number_of_chips
     ddict['number_of_source_locations'] = patterns_per_frame
     ddict['nir_source_wavelength'] = '680nm'
@@ -252,7 +258,7 @@ integration_time                  - Integration time (s) per source for the hist
 capture_rate                      - Captures per second. One capture is defined as all source/detector pairs at both wavelengths.
 number_of_captures                - Number of captures taken over the course of the experiment.
 capture_window                    - Selected captures from original data set.
-occlusion_window                  - Captures during which strap was tightened to simulate venous occlusion. 
+breath_hold_window                  - Captures during which strap was tightened to simulate venous occlusion. 
 number_of_detector_locations      - Number of detectors on the 4x4 array.
 number_of_source_locations        - Total number of source locations on the 4x4 array (2 wavelengths present at each location).
 nir_source_wavelength             - Wavelength of the NIR sources.
@@ -326,7 +332,7 @@ If a NIR/IR source is not found in functional_nir_sources/functional_ir_sources,
                         capture_rate = fps, \
                         number_of_captures = number_of_captures, \
                         capture_window = (capture_window[0], capture_window[1]), \
-                        occlusion_window = (1500, 1800), \
+                        breath_hold_window = (breath_hold_window[0], breath_hold_window[1]), \
                         number_of_detector_locations = number_of_chips, \
                         number_of_source_locations = patterns_per_frame, \
                         nir_source_wavelength = '680nm', \
@@ -353,7 +359,7 @@ integration_time                  - Integration time (s) per source for the hist
 capture_rate                      - Captures per second. One capture is defined as all source/detector pairs at both wavelengths.
 number_of_captures                - Number of captures taken over the course of the experiment.
 capture_window                    - Selected captures from original data set.
-occlusion_window                  - Captures during which strap was tightened to simulate venous occlusion. 
+breath_hold_window                  - Captures during which strap was tightened to simulate venous occlusion. 
 number_of_detector_locations      - Number of detectors on the 4x4 array.
 number_of_source_locations        - Total number of source locations on the 4x4 array (2 wavelengths present at each location).
 nir_source_wavelength             - Wavelength of the NIR sources.
