@@ -13,6 +13,7 @@ import os
 from scipy.io import savemat
 
 def patch_geometry():
+# if True:
     
     # Specify source rows and source columns
     rows = 4
@@ -71,11 +72,18 @@ def patch_geometry():
             
     # Plot for verification
     print("Plotting source/detector positions")
-    plt.scatter(nir_src_pos_x, nir_src_pos_y, color='red')
-    plt.scatter(ir_src_pos_x, nir_src_pos_y, color='purple')
-    plt.scatter(det_pos_x, det_pos_y)
+    plt.scatter(nir_src_pos_x, nir_src_pos_y, color='red', label="NIR", s=10)
+    plt.scatter(ir_src_pos_x, nir_src_pos_y, color='purple', label="IR", s=10)
+    plt.scatter(det_pos_x, det_pos_y, color='green', label="Det", s=10)
     plt.xlim(scene_extent_x)
     plt.ylim(scene_extent_y)
+    plt.xlabel("x-position (mm)")
+    plt.ylabel("y-position (mm)")
+    plt.axvline(x = 0, color='blue', linestyle='--')
+    plt.axhline(y=0, color='blue', linestyle='--')
+    plt.style.use('dark_background')
+    plt.legend()
+    plt.savefig("src_det_positions.png", transparent=True)
     plt.show()
     
     # Save the mat file
@@ -94,21 +102,21 @@ ir_src_pos_y   - y-coordinates of IR source positions in mm.
 det_pos_x      - x-coordinates of detector positions in mm.
 det_pos_y      - y-coordinates of detector positions in mm.
 
-Note that all source and detector positions assume origin in the exact center of the phantom.
+Note that all source and detector positions assume origin in the exact center of the array.
 
 ############################################ Source/Detector Mapping ############################################
- ____________________
+ ___________________
 |    |    |    |    |
-|  1 |  2 |  3 |  4 |
+|  4 |  3 |  2 |  1 |
 |____|____|____|____|
 |    |    |    |    |
-|  5 |  6 |  7 |  8 |
+|  8 |  7 |  6 |  5 |
 |____|____|____|____|
 |    |    |    |    |
-|  9 | 10 | 11 | 12 |
+| 12 | 11 | 10 | 9  |
 |____|____|____|____|
 |    |    |    |    |
-| 13 | 14 | 15 | 16 |
+| 16 | 15 | 14 | 13 |
 |____|____|____|____|
 
 '''
@@ -141,21 +149,21 @@ ir_src_pos_y   - y-coordinates of IR source positions in mm.
 det_pos_x      - x-coordinates of detector positions in mm.
 det_pos_y      - y-coordinates of detector positions in mm.
 
-Note that all source and detector positions assume origin in the exact center of the phantom.
+Note that all source and detector positions assume origin in the exact center of the array.
 
 ############################################ Source/Detector Mapping ############################################
- ____________________
+ ___________________
 |    |    |    |    |
-|  0 |  1 |  2 |  3 |
+|  3 |  2 |  1 |  0 |
 |____|____|____|____|
 |    |    |    |    |
-|  4 |  5 |  6 |  7 |
+|  7 |  6 |  5 |  4 |
 |____|____|____|____|
 |    |    |    |    |
-|  8 |  9 | 10 | 11 |
+| 11 | 10 | 9  | 8  |
 |____|____|____|____|
 |    |    |    |    |
-| 12 | 13 | 14 | 15 |
+| 15 | 14 | 13 | 12 |
 |____|____|____|____|
 
 '''
@@ -171,18 +179,18 @@ Note that all source and detector positions assume origin in the exact center of
 '''Note that all source and detector positions assume origin in the exact center of the phantom.
 
 ############################################ Source/Detector Mapping ############################################
- ____________________
+ ___________________
 |    |    |    |    |
-|  0 |  1 |  2 |  3 |
+|  3 |  2 |  1 |  0 |
 |____|____|____|____|
 |    |    |    |    |
-|  4 |  5 |  6 |  7 |
+|  7 |  6 |  5 |  4 |
 |____|____|____|____|
 |    |    |    |    |
-|  8 |  9 | 10 | 11 |
+| 11 | 10 | 9  | 8  |
 |____|____|____|____|
 |    |    |    |    |
-| 12 | 13 | 14 | 15 |
+| 15 | 14 | 13 | 12 |
 |____|____|____|____|
 
 ################################################### Positions ###################################################
