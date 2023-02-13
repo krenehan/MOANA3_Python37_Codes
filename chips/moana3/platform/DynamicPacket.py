@@ -6,7 +6,7 @@ Created on Tue Oct 25 15:06:25 2022
 """
 
 from copy import deepcopy
-
+import numpy as np
 
 class DynamicPacketException(Exception):
     pass
@@ -17,7 +17,11 @@ class DynamicPacket:
     # Class variables
     __number_of_chips = 0
     __patterns_per_frame = 0
-
+    __number_of_wavelengths = 0
+    
+    # Wavelength
+    __nir_index = 0
+    __ir_index = 1
 
     
     
@@ -29,6 +33,7 @@ class DynamicPacket:
         # Initialize class variables
         self.__number_of_chips = number_of_chips
         self.__patterns_per_frame = patterns_per_frame
+        self.__number_of_wavelengths = 2
         
         # Create template
         self.__dynamic_packet_template = {  
@@ -81,8 +86,9 @@ class DynamicPacket:
             
         # Store
         self.__dynamic_frame_structure = pattern_packet
-        self.dynamic_frame_structure = self.__dynamic_frame_structure
-
+        
+        # Emitter pattern
+        self.emitter_pattern = np.zeros((self.__patterns_per_frame, self.__number_of_chips, self.__number_of_wavelengths), dtype=bool)
 
     # ====================================================
     # Number of chips property
@@ -106,6 +112,42 @@ class DynamicPacket:
     @patterns_per_frame.setter
     def patterns_per_frame(self, new_patterns_per_frame):
         print("Cannot set patterns per frame after initialization")
+        
+        
+    # ====================================================
+    # Number of wavelengths property
+    # ====================================================
+    @property 
+    def number_of_wavelengths(self):
+        return self.__number_of_wavelengths
+    
+    @number_of_wavelengths.setter
+    def number_of_wavelengths(self, new_number_of_wavelengths):
+        print("Cannot set number of wavelengths")
+        
+        
+    # ====================================================
+    # NIR index property
+    # ====================================================
+    @property 
+    def nir_index(self):
+        return self.__nir_index
+    
+    @nir_index.setter
+    def nir_index(self, new_nir_index):
+        print("Cannot set NIR index")
+        
+        
+    # ====================================================
+    # IR index property
+    # ====================================================
+    @property 
+    def ir_index(self):
+        return self.__ir_index
+    
+    @ir_index.setter
+    def ir_index(self, new_ir_index):
+        print("Cannot set IR index")
         
     
     # ====================================================
@@ -134,6 +176,9 @@ class DynamicPacket:
         # Store
         self.__dynamic_frame_structure = pattern_packet
         
+        # Emitter pattern
+        self.emitter_pattern = np.zeros((self.__patterns_per_frame, self.__number_of_chips, self.__number_of_wavelengths), dtype=bool)
+        
         
     # ====================================================
     # Function to show values of the dynamic frame structure
@@ -142,8 +187,15 @@ class DynamicPacket:
         
         # Print write
         print(self.write(pattern_list=pattern_list, chip_list=chip_list))
+        
+        
+    # ====================================================
+    # Override string method
+    # ====================================================
+    def __str__(self):
+        return self.write()
                 
-                
+    
     # ====================================================
     # Function to return string f values of the dynamic frame structure
     # ====================================================
@@ -190,6 +242,9 @@ class DynamicPacket:
     # ====================================================
     def read(self, filepath):
         
+        # Interpret
+        print("Interpreting dynamic packet file at " + filepath)
+        
         # Get value from line
         def get_val(s):
             v = s.split(":")
@@ -204,9 +259,6 @@ class DynamicPacket:
         ll = f.readlines() 
         f.close()
         
-        # Interpret
-        print("Interpreting emitter pattern file")
-        
         # Find number of patterns
         for l in ll[::-1]:
             if "Pattern" in l:
@@ -218,85 +270,155 @@ class DynamicPacket:
             if "Chip" in l:
                 number_of_chips = int(l.split("Chip ")[1].split(':')[0]) + 1
                 break
-            
+        
+        # Recreate the structure if patterns per frame or number of chips changes
         if (patterns_per_frame != self.__patterns_per_frame) or (number_of_chips != self.__number_of_chips):
             self.__recreate(number_of_chips, patterns_per_frame)
+            
+        # Variables for keeping track of which emitter fires in which pattern
+        vcsel_enable = False
+        ir_vcsel_enable = False
+        nir_vcsel_enable = False
+        pattern = 0
+        chip = 0
         
         # Find the dynamic pattern for each chip and each pattern
         for i, l in enumerate(ll):
             
+            # Check to see if we found a NIR emitter
+            if (vcsel_enable and nir_vcsel_enable):
+                self.emitter_pattern[pattern][chip][self.nir_index] = True
+            
+            # Check to see if we found an IR emitter
+            if (vcsel_enable and ir_vcsel_enable):
+                self.emitter_pattern[pattern][chip][self.ir_index] = True
+            
             # Keep track of the pattern number
             if "Pattern" in l:
+                
+                # Get pattern number
                 pattern = int(l.split("Pattern ")[1].split(':')[0])
+                
+                # Reset variables
+                vcsel_enable = False
+                ir_vcsel_enable = False
+                nir_vcsel_enable = False
+                
+                # Go to next line
                 continue
             
             # Keep track of the chip number
             if "Chip" in l:
+                
+                # Get chip number
                 chip = int(l.split("Chip ")[1].split(':')[0])
+                
+                # Reset variables
+                vcsel_enable = False
+                ir_vcsel_enable = False
+                nir_vcsel_enable = False
+                
+                # Go to next line
                 continue
             
             # Find nir_vcsel_enable
             if "nir_vcsel_enable" in l:
+                
+                # Get value
                 succ, val = get_val(l)
                 if succ:
                     self.__dynamic_frame_structure[pattern][chip]['nir_vcsel_enable'] = val
-                # print("nir_vcsel_enable found in line {} for pattern {} chip {}".format(i, pattern, chip))
+                
+                # Check 
+                if bool(int(val)):
+                    nir_vcsel_enable = True
+                    
+                # Go to next line
                 continue
             
             # Find ir_vcsel_enable
             if "ir_vcsel_enable" in l:
+                
+                # Get value
                 succ, val = get_val(l)
                 if succ:
                     self.__dynamic_frame_structure[pattern][chip]['ir_vcsel_enable'] = val
-                # print("ir_vcsel_enable found in line {} for pattern {} chip {}".format(i, pattern, chip))
+                
+                # Check 
+                if bool(int(val)):
+                    ir_vcsel_enable = True
+                
+                # Go to next line
                 continue
             
             # Find vcsel_enable
             if "vcsel_enable" in l:
+                
+                # Get value
                 succ, val = get_val(l)
                 if succ:
                     self.__dynamic_frame_structure[pattern][chip]['vcsel_enable'] = val
-                # print("vcsel_enable found in line {} for pattern {} chip {}".format(i, pattern, chip))
+                
+                # Check 
+                if bool(int(val)):
+                    vcsel_enable = True
+                    
+                # Go to next line
                 continue
             
             # Find driver_dll_word
             if "driver_dll_word" in l:
+                
+                # Get value
                 succ, val = get_val(l)
                 if succ:
                     self.__dynamic_frame_structure[pattern][chip]['driver_dll_word'] = val
-                # print("driver_dll_word found in line {} for pattern {} chip {}".format(i, pattern, chip))
+                    
+                # Go to next line
                 continue
             
             # Find clk_flip
             if "clk_flip" in l:
+                
+                # Get value
                 succ, val = get_val(l)
                 if succ:
                     self.__dynamic_frame_structure[pattern][chip]['clk_flip'] = val
-                # print("clk_flip found in line {} for pattern {} chip {}".format(i, pattern, chip))
+                    
+                # Go to next line
                 continue
             
             # Find aqc_dll_coarse_word
             if "aqc_dll_coarse_word" in l:
+                
+                # Get value
                 succ, val = get_val(l)
                 if succ:
                     self.__dynamic_frame_structure[pattern][chip]['aqc_dll_coarse_word'] = val
-                # print("aqc_dll_coarse_word found in line {} for pattern {} chip {}".format(i, pattern, chip))
+                   
+                # Go to next line
                 continue
             
             # Find aqc_dll_fine_word
             if "aqc_dll_fine_word" in l:
+                
+                # Get value
                 succ, val = get_val(l)
                 if succ:
                     self.__dynamic_frame_structure[pattern][chip]['aqc_dll_fine_word'] = val
-                # print("aqc_dll_fine_word found in line {} for pattern {} chip {}".format(i, pattern, chip))
+                    
+                # Go to next line
                 continue
             
             # Find aqc_dll_finest_word
             if "aqc_dll_finest_word" in l:
+                
+                # Get value
                 succ, val = get_val(l)
                 if succ:
                     self.__dynamic_frame_structure[pattern][chip]['aqc_dll_finest_word'] = val
-                # print("aqc_dll_finest_word found in line {} for pattern {} chip {}".format(i, pattern, chip))
+                    
+                # Go to next line
                 continue
     
     
@@ -345,7 +467,47 @@ class DynamicPacket:
         
         # Success
         return 0
-                    
+
+
+    # ====================================================
+    # Function to check if the chip is an emitter for the pattern
+    # ====================================================
+    def is_emitter(self, pattern, chip):
+        return (self.emitter_pattern[pattern][chip][self.nir_index] or self.emitter_pattern[pattern][chip][self.ir_index])
+    
+    
+    # ====================================================
+    # Function to check which chips are emitters are for pattern
+    # ====================================================
+    def emitters_for_pattern(self, pattern):
+        
+        # Reduce the wavelength axis
+        arr = np.sum(self.emitter_pattern[pattern], axis=1, dtype=bool)
+        
+        # Find indices where we get true
+        return tuple(arr.nonzero()[0])
+    
+    
+    # ====================================================
+    # Function to check whether the infrared or nir infrared pattern is active in pattern
+    # ====================================================
+    def wavelength_for_pattern(self, pattern):
+        
+        # Grab pattern and change to [wavelength:chip]
+        arr = np.transpose(self.emitter_pattern[pattern], axes=(1,0))
+        
+        # Sum along the chip axis
+        arr = np.sum(arr, axis=1, dtype=bool)
+        
+        # Return wavelength
+        if arr[self.__nir_index]:
+            return self.__nir_index
+        elif arr[self.__ir_index]:
+            return self.__ir_index
+        
+        # Find indices where we get true
+        return tuple(arr.nonzero()[0])
+
         
     # ====================================================
     # Function to create pipe in bytearray from dynamic frame structure
