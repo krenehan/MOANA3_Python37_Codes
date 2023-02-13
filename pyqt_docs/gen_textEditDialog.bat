@@ -1,0 +1,1 @@
+C:\Users\Dell-User\Anaconda3\Library\bin\pyuic5.bat -x "C:\Users\Dell-User\Dropbox\MOANA\Python\MOANA3_Python37_Codes\chips\moana3\experiments\gui_development\textEditDialog.ui" -o "C:\Users\Dell-User\Dropbox\MOANA\Python\MOANA3_Python37_Codes\pyqt_docs\textEditDialog.py"
