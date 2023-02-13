@@ -55,8 +55,11 @@ class DataPacket:
         self.receive_array = empty((self.__receive_array_size), dtype=int)
         
         # Create morphed array
-        self.__morphed_array = zeros((self.__number_of_chips, self.__reduced_number_of_frames, self.__patterns_per_frame, self.__bins_per_histogram), dtype=int)
-        
+        if compute_mean:
+            self.__morphed_array = zeros((self.__number_of_chips, self.__reduced_number_of_frames, self.__patterns_per_frame, self.__bins_per_histogram), dtype=int)
+        else:
+            self.__morphed_array = zeros((self.__number_of_chips, self.__number_of_frames, self.__patterns_per_frame, self.__bins_per_histogram), dtype=int)
+            
         # Compute mean also sets number of frames to 1
         self.__compute_mean = compute_mean
                 
@@ -88,6 +91,12 @@ class DataPacket:
         if self.__compute_mean:
             a = mean(a, axis=(1,), keepdims=True, dtype=int)
             
+        # Zero out the zeroeth bin
+        a = transpose(a, axes=(3,0,1,2))
+        a[0].fill(0)
+        a = transpose(a, axes=(1,2,3,0))
+            
+        # Store
         self.__morphed_array = a
         
         # if self.__compute_mean:
@@ -183,7 +192,7 @@ class DataPacket:
     # ====================================================    
     @property
     def capture_time(self):
-        return self.__measurements_per_pattern * self.__period * self.__patterns_per_frame * self.__number_of_frames
+        return self.__measurements_per_pattern * (self.__period / 1e9) * self.__patterns_per_frame * self.__number_of_frames
         
     @capture_time.setter
     def capture_time(self, new_capture_time):
