@@ -35,28 +35,28 @@ def zip_files():
         # Determine the number of captures
         number_of_captures = 0
         for f in os.listdir():
-            #if "capture" in f:
-            if ".npy" in f:
+            if "capture" in f:
+            # if ".npy" in f:
                 number_of_captures = number_of_captures + 1
                 
         # Load the first capture and determine dimensions
-        #number_of_chips, number_of_frames, patterns_per_frame, number_of_bins = np.shape(np.load("capture_1.npy"))
-        number_of_chips, number_of_frames, patterns_per_frame, number_of_bins = np.shape(np.load("1.npy"))
+        number_of_chips, number_of_frames, patterns_per_frame, number_of_bins = np.shape(np.load("capture_0.npy"))
+        # number_of_chips, number_of_frames, patterns_per_frame, number_of_bins = np.shape(np.load("1.npy"))
     
         # Create array
         arr = np.empty( (number_of_captures, number_of_chips, number_of_frames, patterns_per_frame, number_of_bins), dtype=int)   
         
         # Accumulate
         for capture in range(number_of_captures):
-            if not (capture % 100):
+            if not (capture % 10):
                 print("Finished loading " + str(capture) + " captures")
-            #arr[capture] = np.load("capture_" + str(capture) + ".npy")
-            arr[capture] = np.load(str(capture) + ".npy")
+            arr[capture] = np.load("capture_" + str(capture) + ".npy")
+            # arr[capture] = np.load(str(capture) + ".npy")
         
         # Zero out the first bin
         print("Zeroing out garbage collection bins")
         for capture in range(number_of_captures):
-            if not (capture % 100):
+            if not (capture % 10):
                 print("Finished zeroing " + str(capture) + " captures")
             for chip in range(number_of_chips):
                 for frame in range(number_of_frames):
