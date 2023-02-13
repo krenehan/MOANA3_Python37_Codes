@@ -14,29 +14,12 @@ class ReaderStruct():
     """ Data structure for passing information to Reader thread """
         
     # Structure variables
-    __stream_mode = False
     __experiment_directory = ''
     __experiment_directory_set = False
-    __logging = False
+    __logging_enabled = False
     __number_of_captures = 100
-    __reader_done = False
-    __reader_should_stop = False
-    __capture_counter = 0
-    __buffer = None
+    __capture_time = 0
     __debug = False
-    __threadpool = None
-    
-    
-    # ====================================================
-    # Stream mode property
-    # ====================================================
-    @property
-    def stream_mode(self):
-        return self.__stream_mode
-    
-    @stream_mode.setter
-    def stream_mode(self, new_stream_mode):
-        self.__stream_mode = bool(new_stream_mode)
         
     
     # ====================================================
@@ -73,16 +56,16 @@ class ReaderStruct():
     # Logging enabled property
     # ====================================================
     @property
-    def logging(self):
-        return self.__logging
+    def logging_enabled(self):
+        return self.__logging_enabled
     
-    @logging.setter
-    def logging(self, new_logging):
+    @logging_enabled.setter
+    def logging_enabled(self, new_logging_enabled):
         try:
-            new_logging = bool(new_logging)
-            self.__logging = new_logging
+            new_logging_enabled = bool(new_logging_enabled)
+            self.__logging_enabled = new_logging_enabled
         except (ValueError, TypeError):
-            print("Logging value not valid")
+            print("Logging Enabled value not valid")
             
             
     # ====================================================
@@ -102,55 +85,19 @@ class ReaderStruct():
             
             
     # ====================================================
-    # Reader done property
+    # Capture Time property
     # ====================================================
     @property
-    def reader_done(self):
-        return self.__reader_done
+    def capture_time(self):
+        return self.__capture_time
     
-    @reader_done.setter
-    def reader_done(self, new_reader_done):
-        print("Reader done cannot be modified externally")
-        
-        
-    # ====================================================
-    # Reader should stop property
-    # ====================================================
-    @property
-    def reader_should_stop(self):
-        return self.__reader_should_stop
-    
-    @reader_should_stop.setter
-    def reader_should_stop(self, new_reader_should_stop):
+    @capture_time.setter
+    def capture_time(self, new_capture_time):
         try:
-            new_reader_should_stop = bool(new_reader_should_stop)
-            self.__reader_should_stop = new_reader_should_stop
+            new_capture_time = float(new_capture_time)
+            self.__capture_time = new_capture_time
         except (ValueError, TypeError):
-            print("Reader should stop value not valid")
-            
-            
-    # ====================================================
-    # Capture counter property
-    # ====================================================
-    @property
-    def capture_counter(self):
-        return self.__capture_counter
-    
-    @capture_counter.setter
-    def capture_counter(self, new_capture_counter):
-        print("Capture cannot be modified externally")
-        
-        
-    # ====================================================
-    # Buffer property
-    # ====================================================
-    @property
-    def buffer(self):
-        return self.__buffer
-    
-    @buffer.setter
-    def buffer(self, new_buffer):
-        self.__buffer = new_buffer
+            print("Capture time value not valid")
         
         
     # ====================================================
@@ -169,33 +116,8 @@ class ReaderStruct():
             print("Debug value not valid")
             
             
-    # ====================================================
-    # Threadpool property
-    # ====================================================
-    @property
-    def threadpool(self):
-        return self.__threadpool
-    
-    
-    # ====================================================
-    # Threadpool property
-    # ====================================================
-    @threadpool.setter
-    def threadpool(self, new_threadpool):
-        self.__threadpool = new_threadpool
-     
+    # Connect signals
+    def connect_signals(self, start, stop):
         
-    # ====================================================
-    # Increment capture counter function
-    # ====================================================
-    def increment_capture_counter(self):
-        self.__capture_counter += 1 
-
-
-    # ====================================================
-    # Reset capture counter function
-    # ====================================================
-    def reset_capture_counter(self):
-        self.__capture_counter = 0
-        
-        
+        self.reader_start_signal = start
+        self.reader_stop_signal = stop

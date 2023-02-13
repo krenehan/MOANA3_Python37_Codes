@@ -7,83 +7,38 @@ Created on Thu Dec 23 11:00:24 2021
 # Qt imports
 from PyQt5 import QtCore, QtGui, QtWidgets
 from pyqtgraph import GraphicsLayoutWidget, PlotWidget, ViewBox, setConfigOptions
+import test_platform
 
 # Custom Qt imports
-from gui.ScanWindowDialog import Ui_ScanWindowDialog
 from gui.Reader import Reader
 from gui.ReaderStruct import ReaderStruct
 from gui.TestSetupDialog import Ui_TestSetupDialog
-from gui.TestSetup import TestSetup
-from gui.EmitterPatternStruct import EmitterPatternStruct
+from gui.TestSetupStruct import TestSetupStruct
 from gui.CustomQtObjects import PlainTextEdit
+from gui.YieldStruct import YieldStruct
 from DataPacket import DataPacket
+from DynamicPacket import DynamicPacket
 
 # Generic  imports
 import numpy as np
-from copy import copy
 import os
 import datetime
 from time import sleep
 
-
+import threading
+def logthread(caller):
+    print('%-25s: %s, %s,' % (caller, threading.current_thread().name,
+                              threading.current_thread().ident))
 
 
 class Ui_PlotWindow(object):
-    
-    
-    #################################################
-    # Constructor for main window
-    #################################################
-    def __init__(self, dut, bitfile_path, debug=False):
-        
-        # Store the dut handle so that read function can be called
-        self.__dut                              = dut
-        
-        # Store the bitfile path
-        self.__bitfile_path                     = bitfile_path
-        
-        # Create the emitter pattern handle
-        self.__emitter_pattern                  = EmitterPatternStruct()
-        
-        # Create the test setup handle
-        self.__test_setup                       = TestSetup()
-        
-        # Create the threadpool
-        self.__threadpool                       = QtCore.QThreadPool()
-        
-        # Debug variable removes hardware-specific functionality
-        self.__debug = bool(debug)
-        
-        # Set default background and foreground colors
-        setConfigOptions(background='w', foreground='k')
-        
-        # Capture parameters
-        self.capture_counter                    = 0
-        
-        # Path for icon
-        self.__logo_path = os.path.join(os.getcwd(), os.path.abspath('../../platform/gui/logo.png'))
-        self.__logo_found = os.path.exists(self.__logo_path)
-        
-        # Pass the logo to the test setup window
-        self.__test_setup.logo_path = self.__logo_path
-        
-        # Plotting params
-        self.fps                                = 15
-        self.plotInterval                       = 0#int(1/self.fps * 1000)
-        self.log_plotting                       = False
-        self.auto_scaling                       = True
-        self.plot_counter                       = 0
-        self.__target_pattern                    = 0
-        
-
-            
     
     #################################################
     # This comes out of Qt Designer
     #################################################
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(1269, 690)
+        MainWindow.resize(1269, 688)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -92,7 +47,7 @@ class Ui_PlotWindow(object):
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.CaptureText = QtWidgets.QLabel(self.centralwidget)
-        self.CaptureText.setGeometry(QtCore.QRect(30, 10, 1201, 31))
+        self.CaptureText.setGeometry(QtCore.QRect(460, 10, 341, 31))
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -182,7 +137,7 @@ class Ui_PlotWindow(object):
         self.horizontalLayout.addWidget(self.plotItemChip15)
         self.allPlotsVerticalLayout.addLayout(self.horizontalLayout)
         self.startStopButton = QtWidgets.QPushButton(self.centralwidget)
-        self.startStopButton.setGeometry(QtCore.QRect(1070, 630, 161, 31))
+        self.startStopButton.setGeometry(QtCore.QRect(900, 630, 161, 31))
         font = QtGui.QFont()
         font.setPointSize(12)
         font.setBold(True)
@@ -216,34 +171,12 @@ class Ui_PlotWindow(object):
         self.newPatternSubmitButton.setFont(font)
         self.newPatternSubmitButton.setObjectName("newPatternSubmitButton")
         self.layoutWidget1 = QtWidgets.QWidget(self.centralwidget)
-        self.layoutWidget1.setGeometry(QtCore.QRect(700, 630, 341, 29))
+        self.layoutWidget1.setGeometry(QtCore.QRect(400, 630, 124, 31))
         self.layoutWidget1.setObjectName("layoutWidget1")
-        self.horizontalLayout_3 = QtWidgets.QHBoxLayout(self.layoutWidget1)
-        self.horizontalLayout_3.setContentsMargins(0, 0, 0, 0)
-        self.horizontalLayout_3.setObjectName("horizontalLayout_3")
-        self.testSetupButton = QtWidgets.QPushButton(self.layoutWidget1)
-        font = QtGui.QFont()
-        font.setPointSize(12)
-        font.setBold(True)
-        font.setWeight(75)
-        self.testSetupButton.setFont(font)
-        self.testSetupButton.setObjectName("testSetupButton")
-        self.horizontalLayout_3.addWidget(self.testSetupButton)
-        self.scanSettingsButton = QtWidgets.QPushButton(self.layoutWidget1)
-        font = QtGui.QFont()
-        font.setPointSize(12)
-        font.setBold(True)
-        font.setWeight(75)
-        self.scanSettingsButton.setFont(font)
-        self.scanSettingsButton.setObjectName("scanSettingsButton")
-        self.horizontalLayout_3.addWidget(self.scanSettingsButton)
-        self.widget = QtWidgets.QWidget(self.centralwidget)
-        self.widget.setGeometry(QtCore.QRect(400, 630, 271, 31))
-        self.widget.setObjectName("widget")
-        self.horizontalLayout_2 = QtWidgets.QHBoxLayout(self.widget)
+        self.horizontalLayout_2 = QtWidgets.QHBoxLayout(self.layoutWidget1)
         self.horizontalLayout_2.setContentsMargins(0, 0, 0, 0)
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
-        self.logPlottingCheckBox = QtWidgets.QCheckBox(self.widget)
+        self.logPlottingCheckBox = QtWidgets.QCheckBox(self.layoutWidget1)
         font = QtGui.QFont()
         font.setPointSize(12)
         font.setBold(True)
@@ -251,14 +184,55 @@ class Ui_PlotWindow(object):
         self.logPlottingCheckBox.setFont(font)
         self.logPlottingCheckBox.setObjectName("logPlottingCheckBox")
         self.horizontalLayout_2.addWidget(self.logPlottingCheckBox)
-        self.autoScaleCheckBox = QtWidgets.QCheckBox(self.widget)
+        self.layoutWidget_2 = QtWidgets.QWidget(self.centralwidget)
+        self.layoutWidget_2.setGeometry(QtCore.QRect(20, 10, 124, 31))
+        self.layoutWidget_2.setObjectName("layoutWidget_2")
+        self.horizontalLayout_3 = QtWidgets.QHBoxLayout(self.layoutWidget_2)
+        self.horizontalLayout_3.setContentsMargins(0, 0, 0, 0)
+        self.horizontalLayout_3.setObjectName("horizontalLayout_3")
+        self.timeTraceCheckBox = QtWidgets.QCheckBox(self.layoutWidget_2)
         font = QtGui.QFont()
         font.setPointSize(12)
         font.setBold(True)
         font.setWeight(75)
-        self.autoScaleCheckBox.setFont(font)
-        self.autoScaleCheckBox.setObjectName("autoScaleCheckBox")
-        self.horizontalLayout_2.addWidget(self.autoScaleCheckBox)
+        self.timeTraceCheckBox.setFont(font)
+        self.timeTraceCheckBox.setObjectName("timeTraceCheckBox")
+        self.horizontalLayout_3.addWidget(self.timeTraceCheckBox)
+        self.testSetupButton = QtWidgets.QPushButton(self.centralwidget)
+        self.testSetupButton.setGeometry(QtCore.QRect(730, 630, 161, 31))
+        font = QtGui.QFont()
+        font.setPointSize(12)
+        font.setBold(True)
+        font.setWeight(75)
+        self.testSetupButton.setFont(font)
+        self.testSetupButton.setObjectName("testSetupButton")
+        self.statusLabel = QtWidgets.QLabel(self.centralwidget)
+        self.statusLabel.setEnabled(True)
+        self.statusLabel.setGeometry(QtCore.QRect(876, 12, 341, 21))
+        font = QtGui.QFont()
+        font.setPointSize(11)
+        font.setBold(True)
+        font.setWeight(75)
+        self.statusLabel.setFont(font)
+        self.statusLabel.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.statusLabel.setObjectName("statusLabel")
+        self.startDataCollectionButton = QtWidgets.QPushButton(self.centralwidget)
+        self.startDataCollectionButton.setGeometry(QtCore.QRect(1070, 630, 161, 31))
+        font = QtGui.QFont()
+        font.setPointSize(12)
+        font.setBold(True)
+        font.setWeight(75)
+        self.startDataCollectionButton.setFont(font)
+        self.startDataCollectionButton.setObjectName("startDataCollectionButton")
+        self.resetTimeTraceButton = QtWidgets.QPushButton(self.centralwidget)
+        self.resetTimeTraceButton.setGeometry(QtCore.QRect(150, 10, 101, 31))
+        font = QtGui.QFont()
+        font.setPointSize(12)
+        font.setBold(True)
+        font.setWeight(75)
+        self.resetTimeTraceButton.setFont(font)
+        self.resetTimeTraceButton.setObjectName("resetTimeTraceButton")
+        self.resetTimeTraceButton.setEnabled(False)
         MainWindow.setCentralWidget(self.centralwidget)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
@@ -269,554 +243,631 @@ class Ui_PlotWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "MOANA GUI"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "MOANA3 GUI"))
         self.CaptureText.setText(_translate("MainWindow", "Capture 0"))
         self.startStopButton.setText(_translate("MainWindow", "Start Imaging"))
         self.patternPlottedTextEdit.setPlainText(_translate("MainWindow", "0"))
         self.patternPlottedTextLabel.setText(_translate("MainWindow", "Pattern Plotted:"))
         self.newPatternSubmitButton.setText(_translate("MainWindow", "Update Pattern"))
-        self.testSetupButton.setText(_translate("MainWindow", "Test Setup"))
-        self.scanSettingsButton.setText(_translate("MainWindow", "Scan Settings"))
         self.logPlottingCheckBox.setText(_translate("MainWindow", "Log Plotting"))
-        self.autoScaleCheckBox.setText(_translate("MainWindow", "Auto-scale"))
-        
-        
-        # Leave this line
-        self.MainWindow = MainWindow
-        
-        
-    #################################################
-    # Configure the DUT - This is only called once when the FPGA is turned on
-    ################################################# 
-    def __configure_dut(self):
-        
-        # Program the FPGA
-        self.__dut.init_fpga(self.__bitfile_path)
-        dut.fpga_interface.xem.ResetFPGA()
-        
-        
-    #################################################
-    # Reconfigure the DUT - called whenever clock frequency needs to be adjusted
-    ################################################# 
-    def __reconfigure_dut(self):
-        
-        # Reconfigure the clocks on the FPGA
-        self.__dut.init_fpga(self.__bitfile_path)
-        dut.fpga_interface.xem.ResetFPGA()
-  
-        
-    #################################################
-    # Power up the hardware
-    ################################################# 
-    def __power_up(self):
-        
-        # Power-up chip and reset
-        print("Powering on...")
-        
-        # Configure level shifter
-        use_clock_level_shifter = True
-        clock_input_through_level_shifter = True
-        clock_output_through_level_shifter = False
-        
-        # Configure level shifter
-        if use_clock_level_shifter:
-            self.__dut.enable_clock_level_shifter()
-            if clock_input_through_level_shifter:
-                self.__dut.set_clock_level_shifter_for_clock_input()
-            elif clock_output_through_level_shifter:
-                self.__dut.set_clock_level_shifter_for_clock_output()
-            else:
-                self.__dut.disable_clock_level_shifter()
-        else:
-            self.__dut.disable_clock_level_shifter()
+        self.timeTraceCheckBox.setText(_translate("MainWindow", "Time Trace"))
+        self.testSetupButton.setText(_translate("MainWindow", "Test Setup"))
+        self.statusLabel.setText(_translate("MainWindow", "Status"))
+        self.startDataCollectionButton.setText(_translate("MainWindow", "Start Collection"))
+        self.resetTimeTraceButton.setText(_translate("MainWindow", "Reset"))
     
-        # Enable power level shifter
-        self.__dut.enable_power_level_shifter()
-        
-        # Enable supplies
-        self.__dut.enable_hvdd_ldo_supply()
-        self.__dut.enable_cath_sm_supply()
-        sleep(0.1)
-        print("Power on done!")
-        
-        # Issue scan reset
-        print("Resetting hardware...")
-        self.__dut.pulse_signal('scan_reset')
-        self.__dut.pulse_signal('cell_reset')
-        print("Reset done!")
-        
-        
-    #################################################
-    # Configure scan chain based on test setup
-    ################################################# 
-    def __scan(self):
-        
-        # =============================================================================
-        # Scan chain configuration
-        # =============================================================================
-        print("Configuring scan chains...")
-        
-        # Issue scan reset
-        print("Resetting hardware...")
-        self.__dut.pulse_signal('scan_reset')
-        self.__dut.pulse_signal('cell_reset')
-        print("Reset done!")
-        
-        # Create scan bits
-        row         = ['chip_row_'+ str(i) for i in range(self.__test_setup.number_of_chips)]
-        cell        = 'multicell_0'
-        scan_bits = [ self.__dut.chip_infrastructure.get_scan_chain(row[i]).get_scan_chain_segment(cell) for i in range(self.__test_setup.number_of_chips)]
-        
-        for chip in range(self.__test_setup.number_of_chips):
-            
-            # Configure TDC
-            scan_bits[chip].TDCStartSelect            = '1'*8
-            scan_bits[chip].TDCStopSelect             = '1'*8
-            scan_bits[chip].TDCDisable                = '0'*8
-            scan_bits[chip].TDCDCBoost                = '0'
-            
-            # Configure Pattern Counter
-            scan_bits[chip].MeasPerPatt               = np.binary_repr(self.__test_setup.measurements_per_pattern, 15)
-            scan_bits[chip].MeasCountEnable           = '1'
-            
-            # Configure Delay Lines
-            scan_bits[chip].AQCDLLCoarseWord          = np.binary_repr(self.__coarse, 4)
-            scan_bits[chip].AQCDLLFineWord            = np.binary_repr(self.__fine, 3)
-            scan_bits[chip].DriverDLLWord             = np.binary_repr(1 << self.__test_setup.vcsel_setting, 4)
-            scan_bits[chip].ClkFlip                   = '1'
-            scan_bits[chip].ClkBypass                 = np.binary_repr(self.__bypass, 1)
-            
-            # Configure pattern reset signal
-            scan_bits[chip].PattResetExtSel           = '0'
-            scan_bits[chip].PattResetExtEnable        = '0'
-            
-            # Configure VCSEL drivers
-            scan_bits[chip].VCSELEnableExt            = '0'
-            scan_bits[chip].VCSELEnableSel            = '0'
-            scan_bits[chip].VCSELWave1Sel             = '1' if not self.__emitter_pattern.ir_emitters[chip] else '0' #NIR
-            scan_bits[chip].VCSELWave2Sel             = '1' if self.__emitter_pattern.ir_emitters[chip] else '0' #IR
-            
-            # Configure TxData
-            scan_bits[chip].TestPattEnable            = '0'
-            scan_bits[chip].TestDataIn                = np.binary_repr(20, 10)
-            scan_bits[chip].TxDataExtRequestEnable    = '0'
-            
-            # Configure subtractor
-            scan_bits[chip].TimeOffsetWord            = np.binary_repr((self.__test_setup.subtractor_value & 0x3F8) >> 3, 7)
-            scan_bits[chip].TimeOffsetWordLSBs        = np.binary_repr(self.__test_setup.subtractor_value & 0x7, 3)*8
-            scan_bits[chip].SubtractorBypass          = '0'
-            
-            # Configure SPADs
-            scan_bits[chip].SPADEnable                = '1'*64
-        
-        # Make scan bits for the fpga
-        for chip in range(self.__test_setup.number_of_chips):
-            self.__dut.commit_scan_chain(row[chip])
-            sleep(0.1)
-            
-        # Read out results
-        for chip in range(self.__test_setup.number_of_chips):
-            self.__dut.update_scan_chain(row[chip], 0.1)
-        scan_bits_received = [self.__dut.chip_infrastructure.get_scan_chain(row[chip]).get_scan_chain_segment(cell) for chip in range(self.__test_setup.number_of_chips)]
-        
-        # Print the scan chain configuration
-        print("Scan chain configuration done!")
-        
     
-    #################################################
-    # Configure frame controller based on test settings
-    ################################################# 
-    def __configure_frame_controller(self):
-        
-        dut.DelayLine.specify_clock(self.__test_setup.period,0.5) 
-        self.__clk_flip, self.__bypass, self.__coarse, self.__fine = self.__dut.DelayLine.get_setting(self.__test_setup.delay)
-        
-        print("Configuring frame controller...")
-        self.__dut.FrameController.send_frame_data( self.__test_setup.number_of_chips, \
-                                            self.__test_setup.number_of_frames, \
-                                            self.__test_setup.patterns_per_frame, \
-                                            self.__test_setup.measurements_per_pattern )
-        self.__dut.check_emitter_pattern()
-        print("Frame controller configuration done!")
-        
-    
-    #################################################
-    # Begin streaming
-    ################################################# 
-    def __begin_stream(self):
-        
-        # Final reset
-        print("Initializing operation")
-        self.__dut.pulse_signal('cell_reset')
-        self.__dut.reset_fifos()
-        sleep(0.1)
-        
-        # Clear any existing trigger, begin the stream
-        print("Capturing histograms")
-        self.__dut.check_read_trigger()
-        self.__dut.FrameController.begin_stream()
-        
 
+# Remember to replace QtWidgets.QPlainTextEdit with PlainTextEdit
+class PlotWindow(QtWidgets.QMainWindow):
+    
+        
+    # Create signals for reader
+    reader_start_signal = QtCore.pyqtSignal()
+    reader_trigger_signal = QtCore.pyqtSignal()
+    reader_stop_signal = QtCore.pyqtSignal()
+    reader_reload_parameters_signal = QtCore.pyqtSignal()
+    
+    # Signals for triggering logging
+    logging_start_signal = QtCore.pyqtSignal()
+    logging_stop_signal = QtCore.pyqtSignal()
+    
+    # Plot variables
+    capture_number                   = 0
+    plot_interval                    = 0
+    log_plotting                     = False
+    time_trace_plotting              = False
+    plot_counter                     = 0
+    target_pattern                   = 0
+    frame_to_plot_counter            = 0
+    time_y_index                     = 0
+    
+    # Emitter information for plot colors
+    emitters_in_pattern              = ()
+    wavelength_of_pattern            = 0
+    
+    # Status bit for whether or not reader has new data
+    reader_sent_new_data             = False
+    reader_sent_zeroeth_capture      = False
+    
+    # Keep track of whether or not reader has been stopped
+    reader_stopped                   = True
+    
+    # Keep track of whether imaging is running
+    imaging_running                  = False
+    logging_running                  = False
+    
+    # Test setup window
+    test_setup_window_open           = False
+    
+    # Settings for delay line
+    clk_flip                         = False
+    coarse                           = 0
+    fine                             = 0
+    finest                           = 0
+    actual_delay                     = 0
+    
+    # Reset time trace
+    reset_time_trace_caught          = False
+    
+    # Experiment directory
+    experiment_directory        = None
+    
+    
+    #################################################
+    # Constructor for main window
+    #################################################
+    def __init__(self, bitfile_path=None, debug=False, parent=None):
+        
+        # Init super
+        super(PlotWindow, self).__init__(parent=parent)
+        
+        # Set default background and foreground colors
+        setConfigOptions(background='w', foreground='k')
+        
+        # Create ui instance
+        self.ui = Ui_PlotWindow()
+        
+        # Setup ui
+        self.ui.setupUi(self)      
+        
+        # Debug variable removes hardware-specific functionality
+        self.debug = bool(debug)
+        
+        # Store the dut handle so that read function can be called
+        self.dut                              = None if self.debug else test_platform.TestPlatform("moana3")
+        
+        # Store the bitfile path
+        self.bitfile_path                     = bitfile_path
+        
+        # Create the test setup handle
+        self.test_setup_struct                = TestSetupStruct()
+        
+        # Create the dynamic packet
+        self.dynamic_packet                   = DynamicPacket(self.test_setup_struct.number_of_chips, self.test_setup_struct.patterns_per_frame)
+        
+        # Create the yield struct
+        self.yield_struct                     = YieldStruct(self.test_setup_struct.number_of_chips)
+        
+        # Path for icon
+        self.logo_path = os.path.join(os.getcwd(), os.path.abspath('../../platform/gui/logo.png'))
+        self.logo_found = os.path.exists(self.logo_path)
+        
+        # Pass the logo to the test setup window
+        self.test_setup_struct.logo_path = self.logo_path
+        
+        # Print thread for main window
+        logthread('mainwin.__init__')
+        
+        
     #################################################
     # Configuration done outside of Qt Designer function
     ################################################# 
     def configure(self):
         
         # Add logo
-        if self.__logo_found:
-            self.MainWindow.setWindowIcon(QtGui.QIcon(self.__logo_path))
+        if self.logo_found:
+            self.setWindowIcon(QtGui.QIcon(self.logo_path))
         
         # Create font and set text
         font = QtGui.QFont("Times", weight=QtGui.QFont.Bold)
         font.setPointSize(15)
-        self.CaptureText.setFont(font)
+        self.ui.CaptureText.setFont(font)
+        
+        # Make status invisible
+        self.ui.statusLabel.setVisible(False)
 
         # Connect start/stop button
-        self.startStopButton.clicked.connect(self.__startImaging)
+        self.ui.startStopButton.clicked.connect(self.start_imaging)
+        
+        # Connect start collection button
+        self.ui.startDataCollectionButton.clicked.connect(self.start_data_collection)
         
         # Connect the log plotting check box
-        self.logPlottingCheckBox.toggled.connect(self.__toggleLogPlotting)
-        
-        # Connect the auto scaling check box
-        self.autoScaleCheckBox.setChecked(True)
-        self.autoScaleCheckBox.toggled.connect(self.__toggleAutoScaling)
+        self.ui.logPlottingCheckBox.toggled.connect(self.toggle_log_plotting)
         
         # Connect the pattern text edit
-        self.newPatternSubmitButton.clicked.connect(self.__changePatternPlotted)
+        self.ui.newPatternSubmitButton.clicked.connect(self.change_pattern_plotted)
         
         # Connect the test setup button
-        self.testSetupButton.clicked.connect(self.__show_test_setup_window)
+        self.ui.testSetupButton.clicked.connect(self.show_test_setup_window)
         
-        # Connect the scan test button
-        self.scanSettingsButton.clicked.connect(self.__showScanWindow)
+        # Connect the time trace check box
+        self.ui.timeTraceCheckBox.toggled.connect(self.toggle_time_trace)
+        
+        # Connect the resetTimeTraceButton
+        self.ui.resetTimeTraceButton.clicked.connect(self.reset_time_trace)
         
         # Create the plot timer
-        self.__createPlotTimer()
+        self.create_plot_timer()
         
         # Create list for targeting plots
-        self.plot_list = [    self.plotItemChip0,  \
-                              self.plotItemChip1,  \
-                              self.plotItemChip2,  \
-                              self.plotItemChip3,  \
-                              self.plotItemChip4,  \
-                              self.plotItemChip5,  \
-                              self.plotItemChip6,  \
-                              self.plotItemChip7,  \
-                              self.plotItemChip8,  \
-                              self.plotItemChip9,  \
-                              self.plotItemChip10, \
-                              self.plotItemChip11, \
-                              self.plotItemChip12, \
-                              self.plotItemChip13, \
-                              self.plotItemChip14, \
-                              self.plotItemChip15  ]
+        self.plot_list = (    self.ui.plotItemChip0,  \
+                              self.ui.plotItemChip1,  \
+                              self.ui.plotItemChip2,  \
+                              self.ui.plotItemChip3,  \
+                              self.ui.plotItemChip4,  \
+                              self.ui.plotItemChip5,  \
+                              self.ui.plotItemChip6,  \
+                              self.ui.plotItemChip7,  \
+                              self.ui.plotItemChip8,  \
+                              self.ui.plotItemChip9,  \
+                              self.ui.plotItemChip10, \
+                              self.ui.plotItemChip11, \
+                              self.ui.plotItemChip12, \
+                              self.ui.plotItemChip13, \
+                              self.ui.plotItemChip14, \
+                              self.ui.plotItemChip15, )
         
-        # Update plot ranges
-        for i in range(self.__test_setup.number_of_chips):
-            self.plot_list[i].getViewBox().enableAutoRange(axis=ViewBox.YAxis, enable=True)
-            # self.plot_list[i].getViewBox().setYRange(0,4095)
-            self.plot_list[i].getViewBox().setXRange(0,150)
-            # self.plot_list[i].setLabels(title="Chip " + str(i), left="Counts", bottom="Bin")
-            self.plot_list[i].setLabels(title="Chip " + str(i+1))
-            # self.plot_list[i].setDownsampling(ds=15,mode='subsample')
-        
-        # Add y-label to left side
-        for i in [0, 4, 8, 12]:
-            self.plot_list[i].setLabels(left="Counts")
-            
-        # Add x-label to bottom side
-        for i in [12, 13, 14, 15]:
-            self.plot_list[i].setLabels(bottom="Bin Number")
+        # Update plot format
+        self.set_plot_format_to_hist()
             
         # Create default plot pen
         self.plotPen = QtGui.QPen()
         self.plotPen.setColor(QtGui.QColor("blue"))
-        self.plotPen.setWidthF(1.25)
+        self.plotPen.setWidth(0)
         
         # Create special plot pen for emitter
-        self.emitterPlotPen = QtGui.QPen()
-        self.emitterPlotPen.setColor(QtGui.QColor("red"))
-        self.emitterPlotPen.setWidthF(1.25)
+        self.nir_emitter_plot_pen = QtGui.QPen()
+        self.nir_emitter_plot_pen.setColor(QtGui.QColor("darkRed"))
+        self.nir_emitter_plot_pen.setWidth(0)
         
-        # Reload the test setup
-        self.__reload_test_setup()
+        # Create special plot pen for emitter
+        self.ir_emitter_plot_pen = QtGui.QPen()
+        self.ir_emitter_plot_pen.setColor(QtGui.QColor("darkMagenta"))
+        self.ir_emitter_plot_pen.setWidth(0)
         
         # Initialize the hardware
-        if not self.__debug:
-            self.__configure_dut()
-            self.__power_up()
-            self.__configure_frame_controller()
-            self.__scan()
+        if not self.debug:
+            self.configure_dut()
+            self.power_up()
         
         
     #################################################
-    # Start the imaging process
+    # Update the status message
     #################################################
-    def __startImaging(self):
+    def update_status_message(self, message):
         
-        # Change the start button to a stop button
-        self.imaging_started = True
-        self.__updateStartStopButton()
+        # Update status label
+        self.ui.statusLabel.setText(message)
         
-        # Set test setup and scan settings buttons to be unclickable
-        self.testSetupButton.setEnabled(False) 
-        self.scanSettingsButton.setEnabled(False)
-        
-        # Reload test settings
-        self.__reload_test_setup()
-        
-        if not self.__debug:
-        
-            # Reconfigure dut
-            self.__reconfigure_dut()
-            
-            # Reconfigure the frame controller
-            self.__configure_frame_controller()
-            
-            # Rescan
-            self.__scan()
-        
-        # Initialize logging
-        if self.__test_setup.logging:
-            self.__initialize_logging()
-        
-        # Initialize reader
-        self.__initialize_reader()
-        
-        # Start the reader thread
-        self.__reader.start()
-        
-        # Reset the plot counter
-        self.plot_counter = 0
-        
-        # Start plot timer
-        self.__startPlotTimer()
-        
-        
-    #################################################
-    # Stop the imaging process
-    #################################################
-    def __stopImaging(self):
-        
-        # Disable stop button, enable start button
-        self.imaging_started = False
-        self.__updateStartStopButton()
-        
-        # If this function was triggered by startStopButton, stop the reader thread manually
-        if not self.__reader_struct.reader_done:
-            self.__reader_struct.reader_should_stop = True
-            self.__reader.wait()
-        
-        # Set test setup and scan settings buttons to be clickable
-        self.testSetupButton.setEnabled(True)
-        self.scanSettingsButton.setEnabled(True)
-        
-        # Stop the plot timer
-        self.__stopPlotTimer()
+        # Make status visible
+        self.ui.statusLabel.setVisible(True)
         
         
     #################################################
     # Update the button state
     #################################################
-    def __updateStartStopButton(self):
+    def update_start_stop_button(self):
         
         # Change the start button to a stop button and vice versa
-        if self.imaging_started:
-            self.startStopButton.setEnabled(False)
-            self.startStopButton.setText("Stop Imaging")
-            self.startStopButton.clicked.connect(self.__stopImaging)
-            self.startStopButton.clicked.disconnect(self.__startImaging)
-            self.startStopButton.setEnabled(True)
+        if self.imaging_running:
+            self.ui.startStopButton.setEnabled(False)
+            self.ui.startStopButton.setText("Stop Imaging")
+            self.ui.startStopButton.clicked.disconnect()
+            self.ui.startStopButton.clicked.connect(self.stop_imaging)
+            self.ui.startStopButton.setEnabled(True)
         else:
-            self.startStopButton.setEnabled(False)
-            self.startStopButton.setText("Start Imaging")
-            self.startStopButton.clicked.connect(self.__startImaging)
-            self.startStopButton.clicked.disconnect(self.__stopImaging)
-            self.startStopButton.setEnabled(True)
+            self.ui.startStopButton.setEnabled(False)
+            self.ui.startStopButton.setText("Start Imaging")
+            self.ui.startStopButton.clicked.disconnect()
+            self.ui.startStopButton.clicked.connect(self.start_imaging)
+            self.ui.startStopButton.setEnabled(True)
+            
+            
+    #################################################
+    # Update the start/stop collection button state
+    #################################################
+    def update_start_stop_collection_button(self):
+        
+        # Change the start button to a stop button and vice versa
+        if self.logging_running:
+            self.ui.startDataCollectionButton.setEnabled(False)
+            self.ui.startDataCollectionButton.setText("Stop Collection")
+            self.ui.startDataCollectionButton.clicked.disconnect()
+            self.ui.startDataCollectionButton.clicked.connect(self.stop_data_collection)
+            self.ui.startDataCollectionButton.setEnabled(True)
+        else:
+            self.ui.startDataCollectionButton.setEnabled(False)
+            self.ui.startDataCollectionButton.setText("Start Collection")
+            self.ui.startDataCollectionButton.clicked.disconnect()
+            self.ui.startDataCollectionButton.clicked.connect(self.start_data_collection)
+            self.ui.startDataCollectionButton.setEnabled(True)
         
         
     #################################################
-    # Update the capture counter
+    # Update the capture label
     #################################################
-    def __updateCaptureCounter(self):
+    def update_capture_label(self):
+        self.ui.CaptureText.setText("Capture " + str(self.capture_number))
+            
+
+    #################################################
+    # Toggle time trace
+    #################################################
+    def toggle_time_trace(self):
+        
+        if self.time_trace_plotting:
+            print("Changing to histogram plotting")
+            self.time_trace_plotting = False
+            self.set_plot_format_to_hist()
+              
+        else:
+            print("Changing to time trace plotting")
+            self.time_trace_plotting = True
+            self.set_plot_format_to_time_trace()
+            
+            
+    #################################################
+    # Change the plotted pattern
+    #################################################
+    def change_pattern_plotted(self):
+        
+        # Get the new pattern
+        new_pattern = int(self.ui.patternPlottedTextEdit.toPlainText())
+        
+        # Verify it is in the range of acceptable patterns
+        if (new_pattern >= 0) and (new_pattern < self.test_setup_struct.patterns_per_frame):
+            print("New pattern accepted")
+            self.target_pattern = new_pattern
+        else:
+            print("New pattern invalid")
+        
+        # Update the text
+        self.ui.patternPlottedTextEdit.setPlainText(str(self.target_pattern))
+        
+        # Refresh pattern info
+        self.refresh_pattern_emitter_info()
+        
+    
+    #################################################
+    # Start data collection within reader thread
+    #################################################
+    def start_data_collection(self):
+        
+        # Update status message
+        self.update_status_message("Data collection started")
+        
+        # Check that imaging is running
+        if self.imaging_running:
+            
+            # Initialize logging
+            if self.test_setup_struct.logging:
+                self.initialize_logging()
+            
+            # Send signal to reader
+            self.logging_start_signal.emit()
+            
+            # Update status bit
+            self.logging_running = True
+            
+            # Update button
+            self.update_start_stop_collection_button()
+            
+            # Update capture number
+            self.capture_number = 0
+        
+    
+    #################################################
+    # Start data collection within reader thread
+    #################################################
+    def stop_data_collection(self):
+        
+        # Update status message
+        self.update_status_message("Data collection stopped")
+        
+        # Send signal to reader
+        self.logging_stop_signal.emit()
+        
+        # Update status bit
+        self.logging_running = False
+            
+        # Update button
+        self.update_start_stop_collection_button()
+            
+        # Update capture number
+        self.capture_number = 0
+            
+            
+    #################################################
+    # Start the imaging process
+    #################################################
+    def start_imaging(self):
+        
+        # Make sure test setup window has been closed
+        if self.test_setup_window_open:
+            
+            self.update_status_message("Finish test setup before starting")
+            
+        else:
+            
+            # Update status message
+            self.update_status_message("Starting imaging")
+            
+            # Set capture count to 0
+            self.capture_number = 0
+            
+            # Update the capture counter
+            self.update_capture_label()
+            
+            # Indicate that reader has not sent data yet
+            self.reader_sent_zeroeth_capture = False
+            self.reader_sent_new_data = False
+            
+            # Refresh pattern info
+            self.refresh_pattern_emitter_info()
+            
+            # Change the start button to a stop button
+            self.imaging_running = True
+            self.update_start_stop_button()
+            
+            # Set test setup button to be unclickable
+            self.ui.testSetupButton.setEnabled(False)
+            
+            # Reload test settings
+            self.reload_test_setup()
+            
+            # Configure hardware
+            if not self.debug:
+                
+                self.reconfigure_dut()
+                
+                self.power_up()
+                
+                # Rescan
+                self.scan()
+                
+                # Reconfigure the frame controller
+                self.configure_frame_controller()
+                
+                # Activate dynamic mode
+                self.activate_dynamic_mode()
+            
+            # Initialize reader
+            self.initialize_reader()
+            
+            # Start the reader thread
+            self.start_reader()
+            
+            # Reset the plot counter
+            self.plot_counter = 0
+            
+            # Start plot timer
+            self.start_plot_timer()
+            
+            # Update status message
+            self.update_status_message("Waiting for first capture to complete...")
+            
+            
+    #################################################
+    # Stop the imaging process
+    #################################################
+    def stop_imaging(self):
+        
+        # Update status message
+        self.update_status_message("Stopping imaging")
+        
+        # Update status bit
+        self.imaging_running = False
+        self.logging_running = False
+        
+        # Destroy the reader if needed
+        print("reader status is " + str(self.reader_stopped))
+        if not self.reader_stopped:
+            print("Stop reader called from within stop imaging")
+            self.stop_reader()
+        
+        # Stop the plot timer
+        self.stop_plot_timer()
+        
+        # Disable stop button, enable start button
+        self.update_start_stop_button()
+        self.update_start_stop_collection_button()
+        
+        # Set test setup and scan settings buttons to be clickable
+        self.ui.testSetupButton.setEnabled(True)
+        
+        # Update status message
+        self.update_status_message("Imaging stopped")
+        
+        
+    #################################################
+    # Reload from test setup
+    #################################################
+    def reload_test_setup(self):
+
+        # Create packet based on test setup information
+        self.data_packet =  DataPacket( \
+                                    self.test_setup_struct.number_of_chips, \
+                                    self.test_setup_struct.number_of_frames, \
+                                    self.test_setup_struct.patterns_per_frame, \
+                                    self.test_setup_struct.measurements_per_pattern, \
+                                    self.test_setup_struct.period, \
+                                    compute_mean=False
+                                    )
+        
+        # X axis for histogram plotting
+        self.hist_x = range(self.data_packet.bins_per_histogram)
+            
+        # Data structure for plotting pattern-dependent data
+        self.hist_y = np.empty(( \
+                                             self.data_packet.number_of_chips, \
+                                             self.data_packet.number_of_frames, \
+                                             self.data_packet.patterns_per_frame, \
+                                             self.data_packet.bins_per_histogram), \
+                                             dtype=int)
+            
+        # Time axis for time trace plotting
+        self.time_x = np.arange(0, self.test_setup_struct.number_of_captures * \
+                                      self.test_setup_struct.number_of_frames * \
+                                      self.test_setup_struct.frame_time, self.test_setup_struct.frame_time, dtype=float)
+        
+        # Data structure for time trace plotting
+        self.time_y = np.empty(( \
+                                             self.test_setup_struct.number_of_captures * self.data_packet.number_of_frames, \
+                                             self.data_packet.number_of_chips, \
+                                             self.data_packet.patterns_per_frame), \
+                                             dtype=float)
+        self.time_y.fill(np.nan)
+        self.time_y_index = 0
+        
+        # Update pattern plotted
+        if self.target_pattern >= self.test_setup_struct.patterns_per_frame:
+            self.ui.patternPlottedTextEdit.setPlainText(str(self.test_setup_struct.patterns_per_frame-1))
+            self.changePatternPlotted()
+        
+        
+    #################################################
+    # Reset the time trace
+    #################################################
+    def reset_time_trace(self):
+        
+        self.reset_time_trace_caught = True
+        self.update_status_message("Time trace will reset at end of current capture")
+            
+            
+    def get_time_indices(self):
+        return np.where(np.isnan(np.transpose(self.time_y, axes=(1,2,0))[0][0]) == False)
+            
+    def time_x_plot_func(self, chip, frame, pattern):
+        return self.time_x[0:self.time_y_index - self.test_setup_struct.number_of_frames + frame]
+    
+    def time_y_plot_func(self, chip, frame, pattern):
+        return np.transpose(self.time_y[0:self.time_y_index - self.test_setup_struct.number_of_frames + frame], axes=(1,2,0))[chip][pattern]
+            
+    def hist_x_plot_func(self, chip, frame, pattern):
+        return self.hist_x
+    
+    def hist_y_plot_func(self, chip, frame, pattern):
+        return self.hist_y[chip][frame][pattern]
+        
+        
+    #################################################
+    # Increment the capture counter
+    #################################################
+    def increment_capture_number(self):
         
         # Change the capture number
-        capture_number = copy(self.__reader_struct.capture_counter)
-        self.CaptureText.setText("Capture " + str(capture_number))
+        self.capture_number = self.capture_number + 1
         
         
     #################################################
     # Plot the data
     # Plotting works at the data packet level, so number_of_frames is taken from the packet, not the test setup
     #################################################  
-    def __plotData(self):
-        
-        # Increment plot counter
-        self.plot_counter += 1
-        
-        # Update the capture counter
-        self.__updateCaptureCounter()
-        
-        # Update the capture_data
-        self.__full_capture_data = self.__packet.data.copy()
-        
-        # Zero out the zeroeth bin
-        for chip in range(self.__packet.number_of_chips):
-            for frame in range(self.__packet.number_of_frames):
-                for pattern in range(self.__packet.patterns_per_frame):
-                    self.__full_capture_data[chip][frame][pattern][0] = 0
-                    
-        # Calculate the y-max if needed
-        if not self.auto_scaling:
-            y_max = min(np.amax(self.__full_capture_data), 4095)
-        
-        # Spawn subplots
-        for chip in range(self.__test_setup.number_of_chips):
+    def plot_data(self):
             
-            # Clear existing plot items
-            self.plot_list[chip].clear()
+        # Check for new data
+        if self.reader_sent_new_data:
             
-            # Update axis
-            if not self.auto_scaling:
-                self.plot_list[chip].getViewBox().setYRange(0,y_max)
+            # Reset
+            self.reader_sent_new_data = False
             
-            # Change plotting to log scale if requested
-            self.plot_list[chip].setLogMode(y=self.log_plotting)
-            
-            # Plot the target pattern data
-            if self.__emitter_pattern.emitter_pattern[self.__target_pattern][chip]:
-                self.plot_list[chip].plot(range(self.__packet.bins_per_histogram), self.__full_capture_data[chip][0][self.__target_pattern], pen=self.emitterPlotPen)
-            else:
-                self.plot_list[chip].plot(range(self.__packet.bins_per_histogram), self.__full_capture_data[chip][0][self.__target_pattern], pen=self.plotPen)
-            
-            
-    #################################################
-    # Create the logging directory
-    #################################################  
-    def __initialize_logging(self):
-                        
-        # Get the date and time for logging directory creation
-        date_time=str(datetime.datetime.now())
-        
-        # Build the log_file_name (conditions_year-month-day_hour-minute-second.csv)
-        experiment_directory_name = \
-                        self.__test_setup.conditions_str + "_" + \
-                        date_time[0:10] + "_" + \
-                        date_time[11:13]+ "-" + \
-                        date_time[14:16]+ "-" + \
-                        date_time[17:19]
-        
-        # Create directory
-        self.__experiment_directory = os.path.join(self.__test_setup.logging_directory, experiment_directory_name)
-        os.mkdir(self.__experiment_directory)
-        
-        # Check that logging directory was created
-        if not os.path.exists(self.__experiment_directory):
-            raise Exception("Experiment directory " + self.__experiment_directory + " was not created successfully")
-            
-        # Save test setup
-        ts_file = open(os.path.join(self.__experiment_directory, "test_setup.txt"), 'w')
-        ts_file.write(str(self.__test_setup))
-        ts_file.close()
-        
-        # Save emitter pattern
-        np.save(os.path.join(self.__experiment_directory, "emitter_pattern.npy"), self.__emitter_pattern.emitter_pattern, fix_imports=False)
-        
-        # Save ir emitters
-        np.save(os.path.join(self.__experiment_directory, "ir_emitters.npy"), self.__emitter_pattern.ir_emitters, fix_imports=False)
-        
-    #################################################
-    # Create the reader structure and reader
-    ################################################# 
-    def __initialize_reader(self):
-        
-        # Create the reader struct
-        self.__reader_struct                    = ReaderStruct()
-        
-        # Set parameters
-        self.__reader_struct.number_of_captures = self.__test_setup.number_of_captures
-        self.__reader_struct.debug = self.__debug
-        self.__reader_struct.threadpool = self.__threadpool
-        self.__reader_struct.stream_mode = self.__test_setup.stream_mode
-        
-        # If we're logging, we need to specify a directory
-        if self.__test_setup.logging and self.__test_setup.logging_directory_set:
-            self.__reader_struct.experiment_directory = self.__experiment_directory
-            self.__reader_struct.logging = self.__test_setup.logging
-        else:
-            self.__reader_struct.logging = False
-        
-        # Create the reader thread
-        self.__reader = Reader(self.__dut, self.__packet, self.__reader_struct)
-        
-        # Connect the finished signal
-        self.__reader.finished.connect(self.__reader_finished)
-        
-        
-    #################################################
-    # If the reader sends the finished signal and it was not initiated by the main thread, it will stop the imaging process
-    ################################################# 
-    def __reader_finished(self):
-        print("Reader thread called finish")
-        if not self.__reader_struct.reader_should_stop:
-            self.__stopImaging()
-        
+            if self.reader_sent_zeroeth_capture is False:
                 
-    #################################################
-    # Create the plotting timer
-    #################################################
-    def __createPlotTimer(self):
+                # Update status message
+                self.update_status_message("Plotting captures...")
+                
+            # Unset
+            self.reader_sent_zeroeth_capture = True
+            
+            # Reset frame to plot
+            self.frame_to_plot_counter = 0
+            
+            # Update capture label
+            self.update_capture_label()
+            
+            # Increment the capture counter
+            self.increment_capture_number()
+            
+            # Update the capture_data
+            self.hist_y = self.reader_data.copy()
+            
+        # Check if data has been sent yet before beginning plots
+        if self.reader_sent_zeroeth_capture:
+            
+            # Print thread information on first plot
+            if self.plot_counter == 0:
+                
+                logthread('mainwin.plot_data')
+            
+            # Increment plot counter
+            self.plot_counter += 1
+            
+            # Frame to plot
+            if self.frame_to_plot_counter < self.test_setup_struct.number_of_frames - 1:
+                self.frame_to_plot_counter = self.frame_to_plot_counter + 1
+            else:
+                self.frame_to_plot_counter = 0
+                print("rollover for capture " + str(self.capture_number))
+            
+            # Spawn subplots
+            for chip in range(self.test_setup_struct.number_of_chips):
+                
+                # Change plotting to log scale if requested
+                if self.log_plotting:
+                    
+                    # Set log plotting
+                    self.plot_list[chip].setLogMode(y=self.log_plotting)
+                
+                # Downsample
+                self.plot_list[chip].setDownsampling(ds=1, auto=False, mode='subsample')
+                
+                # # Plot the target pattern data
+                if chip in self.emitters_in_pattern:
+                    
+                    # If NIR, plot with red color
+                    if self.wavelength_of_pattern == self.dynamic_packet.nir_index:
+                        self.plot_list[chip].plot(self.plot_x(chip, self.frame_to_plot_counter, self.target_pattern), \
+                                                  self.plot_y(chip, self.frame_to_plot_counter, self.target_pattern), \
+                                                  pen=self.nir_emitter_plot_pen, clear=True)
+                    
+                    # If IR, plot with purple color
+                    elif self.wavelength_of_pattern == self.dynamic_packet.ir_index:
+                        self.plot_list[chip].plot(self.plot_x(chip, self.frame_to_plot_counter, self.target_pattern), \
+                                                  self.plot_y(chip, self.frame_to_plot_counter, self.target_pattern), \
+                                                  pen=self.ir_emitter_plot_pen, clear=True)
+                        
+                else:
+                    
+                    # If detector, plot with blue color
+                    self.plot_list[chip].plot(self.plot_x(chip, self.frame_to_plot_counter, self.target_pattern), \
+                                              self.plot_y(chip, self.frame_to_plot_counter, self.target_pattern), \
+                                              pen=self.plotPen, clear=True)
         
-        # Create a precise timer
-        self.plotTimer=QtCore.QTimer()
-        self.plotTimer.setTimerType(QtCore.Qt.PreciseTimer)
-        # self.plotTimer.setSingleShot(True)
-        
-        # Connect the timer's timeout function to the plot function
-        self.plotTimer.timeout.connect(self.__plotData)
-        
-    
-    #################################################
-    # Start the plotting timer
-    #################################################
-    def __startPlotTimer(self):
-        
-        # print("Starting plot timer")
-        self.plotTimer.start(self.plotInterval)
-        
-        
-    #################################################
-    # Stop the plotting timer
-    #################################################
-    def __stopPlotTimer(self):
-        
-        # print("Stopping plot timer")
-        self.plotTimer.stop()
-        
-
-    #################################################
-    # Change the plotted pattern
-    #################################################
-    def __changePatternPlotted(self):
-        
-        # Get the new pattern
-        new_pattern = int(self.patternPlottedTextEdit.toPlainText())
-        
-        # Verify it is in the range of acceptable patterns
-        if (new_pattern >= 0) and (new_pattern < self.__test_setup.patterns_per_frame):
-            print("New pattern accepted")
-            self.__target_pattern = new_pattern
+        # This is the case where the reader hasn't given us a capture yet
         else:
-            print("New pattern invalid")
-        
-        # Update the text
-        self.patternPlottedTextEdit.setPlainText(str(self.__target_pattern))
-        
-        
+            
+            # Spawn subplots
+            for chip in range(self.test_setup_struct.number_of_chips):
+                
+                # Clear existing plot items
+                self.plot_list[chip].clear()
+    
     #################################################
     # Set log plotting
     #################################################
-    def __toggleLogPlotting(self):
+    def toggle_log_plotting(self):
         
         if self.log_plotting:
             print("Changing to linear plotting")
@@ -827,80 +878,610 @@ class Ui_PlotWindow(object):
             self.log_plotting = True
         
         # Change plotting to log scale if requested
-        for chip in range(self.__test_setup.number_of_chips):
+        for chip in range(self.test_setup_struct.number_of_chips):
             self.plot_list[chip].setLogMode(y=self.log_plotting)
-     
             
+    
     #################################################
-    # Set auto scaling
-    #################################################  
-    def __toggleAutoScaling(self):
+    # Set plot format to histogram
+    #################################################
+    def set_plot_format_to_time_trace(self):
+    
+        # Update plot ranges
+        for i in range(self.test_setup_struct.number_of_chips):
+            self.plot_list[i].getViewBox().enableAutoRange(axis=ViewBox.YAxis, enable=True)
+            self.plot_list[i].getViewBox().enableAutoRange(axis=ViewBox.XAxis, enable=True)
         
-        if self.auto_scaling:
-            print("Changing to fixed scale")
-            self.auto_scaling = False
-            for i in range(self.__test_setup.number_of_chips):
-                self.plot_list[i].getViewBox().enableAutoRange(axis=ViewBox.YAxis, enable=False)
-        else:
-            print("Changing to auto scaling")
-            self.auto_scaling = True
-            for i in range(self.__test_setup.number_of_chips):
-                self.plot_list[i].getViewBox().enableAutoRange(axis=ViewBox.YAxis, enable=True)
+        # Add y-label to left side
+        for i in [0, 4, 8, 12]:
+            self.plot_list[i].setLabels(left="CW Counts")
             
+        # Add x-label to bottom side
+        for i in [12, 13, 14, 15]:
+            self.plot_list[i].setLabels(bottom="Time (s)")
             
-    #################################################
-    # Create scan window
-    #################################################
-    def __showScanWindow(self):
+        # Pointers for x and y data for plotting
+        self.plot_x = self.time_x_plot_func
+        self.plot_y = self.time_y_plot_func
         
-        # Create the scan window
-        self.scanWindow = Ui_ScanWindowDialog(0)
-        self.scanDialog = QtWidgets.QDialog()
-        self.scanDialog.setModal(True)
-        if self.__logo_found:
-            self.scanDialog.setWindowIcon(QtGui.QIcon(self.__logo_path))
-        self.scanWindow.setupUi(self.scanDialog)
-        self.scanDialog.show()
+        # Enable reset button
+        self.ui.resetTimeTraceButton.setEnabled(True)
+            
+    
+    #################################################
+    # Set plot format to time trace
+    #################################################
+    def set_plot_format_to_hist(self):
+        
+        # Update plot ranges
+        for i in range(self.test_setup_struct.number_of_chips):
+            self.plot_list[i].getViewBox().enableAutoRange(axis=ViewBox.YAxis, enable=True)
+            self.plot_list[i].getViewBox().enableAutoRange(axis=ViewBox.XAxis, enable=False)
+            self.plot_list[i].getViewBox().setXRange(0,150)
+            self.plot_list[i].setLabels(title="Chip " + str(i+1))
+        
+        # Add y-label to left side
+        for i in [0, 4, 8, 12]:
+            self.plot_list[i].setLabels(left="Counts")
+            
+        # Add x-label to bottom side
+        for i in [12, 13, 14, 15]:
+            self.plot_list[i].setLabels(bottom="Bin Number")  
+            
+        # Pointers for x and y data for plotting
+        self.plot_x = self.hist_x_plot_func
+        self.plot_y = self.hist_y_plot_func
+        
+        # Disable reset button
+        self.ui.resetTimeTraceButton.setEnabled(False)
+            
+            
+    #################################################
+    # Refresh information about the emitter in the pattern
+    #################################################
+    def refresh_pattern_emitter_info(self):
+        
+        # Update the emitters in the pattern
+        self.emitters_in_pattern = self.dynamic_packet.emitters_for_pattern(self.target_pattern)
+        
+        # Update the wavelength of the pattern
+        self.wavelength_of_pattern = self.dynamic_packet.wavelength_for_pattern(self.target_pattern)
         
         
     #################################################
     # Create test setup window
     #################################################
-    def __show_test_setup_window(self):
+    def show_test_setup_window(self):
+        
+        # Update status message
+        self.update_status_message("Configuring test setup")
         
         # Create the emitter pattern window
-        self.test_setup_window = Ui_TestSetupDialog(self.__test_setup, self.__emitter_pattern)
+        self.test_setup_window = Ui_TestSetupDialog(self.test_setup_struct, self.dynamic_packet, self.yield_struct)
         self.test_setup_dialog = QtWidgets.QDialog()
         self.test_setup_dialog.setModal(True)
-        if self.__logo_found:
-            self.test_setup_dialog.setWindowIcon(QtGui.QIcon(self.__logo_path))
+        if self.logo_found:
+            self.test_setup_dialog.setWindowIcon(QtGui.QIcon(self.logo_path))
         self.test_setup_window.setupUi(self.test_setup_dialog)
         self.test_setup_window.configure()
         self.test_setup_dialog.show()
         
+        # Update
+        self.test_setup_window_open = True
+        
+        # Connect window close signal
+        self.test_setup_dialog.finished.connect(self.test_setup_window_closed)
+        
+    
+    #################################################
+    # Called when test setup window is closed
+    #################################################
+    def test_setup_window_closed(self):
+        
+        # Keep track of state
+        self.test_setup_window_open = False
+        
+        # Update status message
+        self.update_status_message("Test setup configuration complete")
+        
+    
+    #################################################
+    # Create the reader structure and reader
+    ################################################# 
+    def initialize_reader(self):
+        
+        # Create the reader struct
+        self.reader_struct                    = ReaderStruct()
+        print("Created reader struct")
+        
+        # Update reader struct
+        self.update_reader_struct()
+        
+        # Create the reader thread
+        self.reader = Reader(self.dut, self.data_packet, self.reader_struct)
+        print("Created reader")
+        
+        # Create thread
+        self.reader_thread = QtCore.QThread()
+        print("Created reader thread")
+        
+        # Move reader to thread
+        self.reader.moveToThread(self.reader_thread)
+        print("Moved reader to reader thread")
+        
+        # # Connect started signal from thread to reader, which will start reader when thread starts
+        self.reader_thread.started.connect(self.reader.start) 
+        
+        # Connect new_data_available signal from reader to new_data_from_reader slot
+        self.reader.new_data_available.connect(self.new_data_from_reader)
+        
+        # Connect reader_stop signal to stop slot in reader
+        self.reader_stop_signal.connect(self.reader.stop)
+        
+        # Connect logging_start and logging_stop signal to slots in reader
+        self.logging_start_signal.connect(self.reader.start_logging)
+        self.logging_stop_signal.connect(self.reader.stop_logging)
+        
+        # Connect reload_parameters signal
+        self.reader_reload_parameters_signal.connect(self.reader.reload_parameters)
+        
+        # Connect internal_finished signal to reader_called_stop slot
+        self.reader.finished.connect(self.reader_called_stop)
+        
+        # Connect the destroyed signal from the reader to the reader_destroyed slot
+        self.reader.destroyed.connect(self.reader_destroyed)
+        
+        # Connect finished signal from reader thread to internal method
+        self.reader_thread.finished.connect(self.reader_thread_finished) 
+        
+        
+        
+    #################################################
+    # Start the reader by emitting start signal
+    ################################################# 
+    def start_reader(self):
+
+        # # Start thread
+        self.reader_thread.start()
+        
+        # Status bit
+        self.reader_stopped = False
+    
+    
+    #################################################
+    # Stop the reader by emitting reader stop signal
+    ################################################# 
+    def stop_reader(self):
+        
+        print("Emitting stop signal to reader")
+        
+        # Stop reader
+        self.reader_stop_signal.emit()
+        
+        
+    #################################################
+    # Keep track of when the reader has new data
+    #################################################
+    @QtCore.pyqtSlot(object)
+    def new_data_from_reader(self, np_arr):
+        
+        print("Reader sent new data")
+        
+        # Store
+        self.reader_data = np_arr
+        
+        # Sum and transpose numpy array to [frames:chips:patterns]
+        np_arr = np.transpose(np.sum(np_arr, axis=3), axes=(1,0,2))
+        
+        # Time trace reset triggers the time vector to reset
+        if self.reset_time_trace_caught:
+            self.time_y_index = 0
+            self.time_y.fill(np.nan)
+            self.reset_time_trace_caught = False
+            
+        # Accumulate data in the time structure
+        if self.time_y_index + self.test_setup_struct.number_of_frames < len(self.time_y):
+            self.time_y[self.time_y_index: self.time_y_index + self.test_setup_struct.number_of_frames] = np_arr
+            self.time_y_index = self.time_y_index + self.test_setup_struct.number_of_frames
+        
+        # Update
+        self.reader_sent_new_data = True
+        
+        
+    #################################################
+    # Reader calls stop internally, which triggers this function
+    #################################################
+    @QtCore.pyqtSlot()
+    def reader_called_stop(self):
+        
+        print("Reader called stop")
+        
+        # Update status bit
+        self.reader_stopped = True
+        
+        # Delete reader later
+        self.reader.deleteLater()
+        
+        # Call the stop_imaging function if needed
+        if self.imaging_running:
+            print("stop_imaging called from within stop reader_call_stop")
+            self.stop_imaging()
+        
+        
+    #################################################
+    # Function for situation where reader is destroyed
+    #################################################
+    @QtCore.pyqtSlot(QtCore.QObject)
+    def reader_destroyed(self, status_int):
+        
+        # Stop imaging if the reader sends finished signal to this slot
+        print("Reader sent destroyed signal")
+        
+        # Remove pointer to reader
+        self.reader = None
+        
+        # Quit reader thread
+        self.reader_thread.quit()
+        
+        
+    #################################################
+    # If the reader thread sends the finished signal and it was not initiated by the main thread, it will stop the imaging process
+    #################################################
+    @QtCore.pyqtSlot()
+    def reader_thread_finished(self):
+        
+        # Print
+        print("Reader thread sent finished signal")
+        
+        # Schedule reader thread for deletion
+        self.reader_thread.deleteLater()
+        
+        # Release pointer to reader thread
+        self.reader_thread = None
+        
+        
+    #################################################
+    # Create the plotting timer
+    #################################################
+    def create_plot_timer(self):
+        
+        # Create a coarse timer for controlling overall plotting speed
+        self.plot_timer=QtCore.QTimer()
+        self.plot_timer.setTimerType(QtCore.Qt.CoarseTimer)
+        
+        # Create the precise timer for scheduling plot operations when overal plot timer expires
+        self.do_plot_timer = QtCore.QTimer()
+        self.do_plot_timer.setTimerType(QtCore.Qt.PreciseTimer)
+        self.do_plot_timer.setSingleShot(True)
+        
+        # Connect the timer's timeout function to the plot function
+        self.plot_timer.timeout.connect(self.do_plot)
+        self.do_plot_timer.timeout.connect(self.plot_data)
+        
+        
+    #################################################
+    # Start the timer that calls plot_data
+    #################################################
+    def do_plot(self):
+        self.do_plot_timer.start(self.plot_timer.remainingTime())
+    
+    
+    #################################################
+    # Start the plotting timer
+    #################################################
+    def start_plot_timer(self):
+        
+        print("Plot timer started")
+        
+        # Recalculate plot interval based on number of frames and capture time
+        self.plot_interval = int(self.test_setup_struct.capture_time / self.test_setup_struct.number_of_frames * 1000)
+        
+        # Start plot timer
+        self.plot_timer.start(self.plot_interval // 2)
+        
+        
+    #################################################
+    # Stop the plotting timer
+    #################################################
+    def stop_plot_timer(self):
+        
+        print("Plot timer stopped")
+        self.plot_timer.stop()
+            
+            
+    #################################################
+    # Create the logging directory
+    #################################################  
+    def initialize_logging(self):
+                        
+        # Get the date and time for logging directory creation
+        date_time=str(datetime.datetime.now())
+        
+        # Build the log_file_name (conditions_year-month-day_hour-minute-second.csv)
+        c_str = self.test_setup_struct.conditions + "_" if len(self.test_setup_struct.conditions) > 0 else ''
+        print("c_str: " + c_str)
+        experiment_directory_name = \
+                        c_str + \
+                        date_time[0:10] + "_" + \
+                        date_time[11:13]+ "-" + \
+                        date_time[14:16]+ "-" + \
+                        date_time[17:19]
+        print("exp dir name: " + experiment_directory_name)
+        
+        # Create directory
+        self.experiment_directory = os.path.join(self.test_setup_struct.logging_directory, experiment_directory_name)
+        os.mkdir(self.experiment_directory)
+        
+        # Check that logging directory was created
+        if not os.path.exists(self.experiment_directory):
+            raise Exception("Experiment directory " + self.experiment_directory + " was not created successfully")
+            
+        # Save test setup
+        ts_file = open(os.path.join(self.experiment_directory, "test_setup.txt"), 'w')
+        ts_file.write(str(self.test_setup_struct))
+        ts_file.close()
+        
+        # Save dynamic packet
+        dp_file = open(os.path.join(self.experiment_directory, "dynamic_packet.txt"), "w")
+        dp_file.write(str(self.dynamic_packet))
+        dp_file.close()
+        
+        # Save yield file
+        y_file = open(os.path.join(self.experiment_directory, "yield.txt"), "w")
+        y_file.write(str(self.yield_struct))
+        
+        # Update reader structure
+        self.update_reader_struct()
+            
+        # Emit reload parameters to reader
+        self.reader_reload_parameters_signal.emit()
+            
+            
+    #################################################
+    # Update reader structure
+    #################################################  
+    def update_reader_struct(self):
+    
+        # Set parameters in reader structure
+        self.reader_struct.number_of_captures = self.test_setup_struct.number_of_captures
+        self.reader_struct.debug = self.debug
+        self.reader_struct.capture_time = self.test_setup_struct.capture_time
+        
+        # If we're logging, we need to specify a directory
+        if self.test_setup_struct.logging and self.test_setup_struct.logging_directory_set:
+            self.reader_struct.experiment_directory = self.experiment_directory
+            self.reader_struct.logging_enabled = self.test_setup_struct.logging
+        else:
+            self.reader_struct.logging_enabled = False
+        
+        
+        
+        
+    #################################################
+    # Override closeEvent to prevent closing of MainWindow while reader thread is still alive
+    ################################################# 
+    def closeEvent(self, event):
+        
+        # If imaging process is still running, we ignore the close event
+        if self.imaging_running:
+            
+            # Update status message
+            self.update_status_message("Stop imaging before closing!")
+            
+            # Ignore close event
+            event.ignore()
+            
+        else:
+            
+            # Shut down hardware
+            if not self.debug:
+                print("Disabling power supplies")
+                self.dut.disable_cath_sm_supply()
+                self.dut.disable_hvdd_ldo_supply()
+            
+                print("Closing FPGA")
+                self.dut.fpga_interface.xem.Close()
+            
+            # Accept close event
+            event.accept()
+            
+            
+#################################################
+#################################################
+# HARDWARE FUNCTIONS
+################################################# 
+#################################################
+            
+            
+    #################################################
+    # Power up the hardware
+    ################################################# 
+    def power_up(self):
+        
+        # Power-up chip and reset
+        self.update_status_message("Powering on...")
+        
+        # Configure level shifter
+        use_clock_level_shifter = True
+        clock_input_through_level_shifter = True
+        clock_output_through_level_shifter = False
+        
+        # Configure level shifter
+        if use_clock_level_shifter:
+            self.dut.enable_clock_level_shifter()
+            if clock_input_through_level_shifter:
+                self.dut.set_clock_level_shifter_for_clock_input()
+            elif clock_output_through_level_shifter:
+                self.dut.set_clock_level_shifter_for_clock_output()
+            else:
+                self.dut.disable_clock_level_shifter()
+        else:
+            self.dut.disable_clock_level_shifter()
+        
+        # Enable supplies
+        self.dut.enable_hvdd_ldo_supply()
+        self.dut.enable_cath_sm_supply()
+        sleep(0.1)
+        self.update_status_message("Power on done!")
+        
+        # Issue scan reset
+        self.update_status_message("Resetting hardware...")
+        self.dut.pulse_signal('scan_reset')
+        self.dut.pulse_signal('cell_reset')
+        self.update_status_message("Reset done!")
+        
+        
+    #################################################
+    # Configure the DUT - called whenever clock frequency needs to be adjusted
+    ################################################# 
+    def configure_dut(self):
+        
+        # Print
+        self.update_status_message("Configuring FPGA...")
+        
+        # Reconfigure the clocks on the FPGA
+        self.dut.init_fpga(self.bitfile_path)
+        self.dut.fpga_interface.xem.ResetFPGA()
+        
+        # Print
+        self.update_status_message("FPGA configuration done!")
+        
 
     #################################################
-    # Reload from test setup
+    # Reconfigure the DUT - called whenever clock frequency needs to be adjusted
+    ################################################# 
+    def reconfigure_dut(self):
+        
+        # Print
+        self.update_status_message("Configuring FPGA...")
+        
+        # Close FPGA interface
+        self.dut.fpga_interface.xem.Close()
+        
+        # Recreate dut
+        self.dut = test_platform.TestPlatform("moana3")
+        self.dut.init_fpga(self.bitfile_path, refclk_freq=self.test_setup_struct.clock_frequency)
+        self.dut.fpga_interface.xem.ResetFPGA()
+        
+        # Print
+        self.update_status_message("FPGA configuration done!")
+        
     #################################################
-    def __reload_test_setup(self):
+    # Configure scan chain based on test setup
+    ################################################# 
+    def scan(self):
+        
+        # =============================================================================
+        # Scan chain configuration
+        # =============================================================================
+        self.update_status_message("Configuring scan chains...")
+        
+        # Issue scan reset
+        self.update_status_message("Resetting hardware...")
+        self.dut.pulse_signal('scan_reset')
+        self.dut.pulse_signal('cell_reset')
+        self.update_status_message("Reset done!")
+        
+        # Create scan bits
+        row         = ['chip_row_'+ str(i) for i in range(self.test_setup_struct.number_of_chips)]
+        cell        = 'multicell_0'
+        scan_bits = [ self.dut.chip_infrastructure.get_scan_chain(row[i]).get_scan_chain_segment(cell) for i in range(self.test_setup_struct.number_of_chips)]
+        
+        for chip in range(self.test_setup_struct.number_of_chips):
+            
+            # Configure TDC
+            scan_bits[chip].TDCStartSelect        = '1'*8
+            scan_bits[chip].TDCStopSelect         = '1'*8
+            scan_bits[chip].TDCDisable            = '0'*8
+            scan_bits[chip].TDCDCBoost            = '0'*8
+            
+            # Configure Pattern Counter
+            scan_bits[chip].MeasPerPatt           = np.binary_repr(self.test_setup_struct.measurements_per_pattern, 24)
+            scan_bits[chip].MeasCountEnable       = '1'
 
-        # Create packet based on test setup information
-        # TODO determine if this needs to be preset to 0
-        self.__packet =  DataPacket(self.__test_setup.number_of_chips, self.__test_setup.number_of_frames, self.__test_setup.patterns_per_frame, self.__test_setup.measurements_per_pattern, self.__test_setup.period)
+            scan_bits[chip].AQCDLLCoarseWord      = np.binary_repr(self.coarse, 4)
+            scan_bits[chip].AQCDLLFineWord        = np.binary_repr(self.fine, 3)
+            scan_bits[chip].AQCDLLFinestWord      = np.binary_repr(self.finest, 1)
+            scan_bits[chip].DriverDLLWord         = np.binary_repr(0, 5)
+            scan_bits[chip].ClkFlip               = np.binary_repr(self.clk_flip,1)
+            scan_bits[chip].ClkBypass             = '0'
+            
+            # Configure pattern reset signal
+            scan_bits[chip].PattResetControlledByTriggerExt       = '0' 
+            scan_bits[chip].PattResetExtEnable    = '0'
+                
+            # Configure VCSELs
+            scan_bits[chip].VCSELWave1Enable         = '0'    
+            scan_bits[chip].VCSELEnableWithScan        = '0'     
+            scan_bits[chip].VCSELEnableControlledByScan        = '0' 
+            scan_bits[chip].VCSELWave2Enable         = '0'
+            
+            # Configure TxData
+            scan_bits[chip].TestPattEnable        = '0'
+            scan_bits[chip].TestDataIn            = np.binary_repr(4, 10)
+            scan_bits[chip].TxDataExtRequestEnable = '0'
+            
+            # Configure subtractor
+            scan_bits[chip].TimeOffsetWord        = np.binary_repr(self.test_setup_struct.subtractor_value, 10)
+            scan_bits[chip].SubtractorBypass      = '0'
+            
+            # Dynamic operation
+            scan_bits[chip].DynamicConfigEnable = '1'
+            
+            # Configure SPADs
+            scan_bits[chip].SPADEnable            = '1'*64
         
-        # Data structure for plotting pattern-dependent data
-        # TODO determine if this needs to be preset to 0
-        self.__full_capture_data = np.empty((self.__packet.number_of_chips, self.__packet.number_of_frames, self.__packet.patterns_per_frame, self.__packet.bins_per_histogram), dtype=int)
+        # Make scan bits for the fpga
+        for chip in range(self.test_setup_struct.number_of_chips):
+            self.dut.commit_scan_chain(row[chip])
+            sleep(0.1)
+            
+        # Read out results
+        for chip in range(self.test_setup_struct.number_of_chips):
+            self.dut.update_scan_chain(row[chip], 0.1)
+        # scan_bits_received = [self.dut.chip_infrastructure.get_scan_chain(row[chip]).get_scan_chain_segment(cell) for chip in range(self.test_setup_struct.number_of_chips)]
         
-        # Update pattern plotted
-        if self.__target_pattern >= self.__test_setup.patterns_per_frame:
-            self.patternPlottedTextEdit.setPlainText(str(0))
-            self.__changePatternPlotted()
+        # Print the scan chain configuration
+        self.update_status_message("Scan chain configuration done!")
         
-        # Total counts
-        # TODO Implement average counts display on pyqtgraphs
-        # TODO determine if this needs to be preset to 0
-        self.__average_counts = np.empty((self.__packet.number_of_chips), dtype=float)
+    
+    #################################################
+    # Configure frame controller based on test settings
+    ################################################# 
+    def configure_frame_controller(self):
+        
+        # Print
+        self.update_status_message("Configuring frame controller...")
+        
+        # Specify clock for delay line
+        self.dut.DelayLine.specify_clock(self.test_setup_struct.period, 0.5)
+        
+        # Find requested delay
+        self.clk_flip, self.coarse, self.fine, self.finest, self.actual_delay = self.dut.DelayLine.get_setting(self.test_setup_struct.delay)
+        self.dut.FrameController.send_frame_data( self.test_setup_struct.number_of_chips, \
+                                            self.test_setup_struct.number_of_frames,   \
+                                            self.test_setup_struct.patterns_per_frame,     \
+                                            self.test_setup_struct.measurements_per_pattern,
+                                            self.test_setup_struct.pad_captured_mask )
+            
+        # Print
+        self.update_status_message("Frame controller configuration done!")
+        
+        
+    #################################################
+    # Configure frame controller based on test settings
+    ################################################# 
+    def activate_dynamic_mode(self):
+        
+        # Print
+        self.update_status_message("Activating dynamic mode...")
+        
+        # Activate dynamic mode
+        self.dut.activate_dynamic_mode(self.dynamic_packet)
+
+        # Print
+        self.update_status_message("Dynamic mode activated!")
+        
         
 
 
@@ -909,15 +1490,18 @@ if __name__ == "__main__":
     
     # DUT and packet for initializing mainwindow
     dut = None
+    debug = True
 
     # Run app
     app = QtWidgets.QApplication(sys.argv)
-    MainWindow = QtWidgets.QMainWindow()
+    MainWindow = PlotWindow(dut, debug=debug)
+    MainWindow.configure()
+    MainWindow.show()
     # Set logo
     # self.test_setup_dialog.setWindowIcon(QtGui.QIcon("logo.png"))
-    ui = Ui_PlotWindow(dut)
-    ui.setupUi(MainWindow)
-    ui.configure()
-    MainWindow.show()
+    # ui = Ui_PlotWindow(dut, debug=debug)
+    # ui.setupUi(MainWindow)
+    # ui.configure()
+    # MainWindow.show()
     sys.exit(app.exec_())
 
