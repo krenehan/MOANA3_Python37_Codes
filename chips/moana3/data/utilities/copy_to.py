@@ -13,12 +13,11 @@ import shutil
 
 # List of relevant files within subdirectory that should be copied
 relevant_files = ( \
-                    'averaged.npz', \
                     'captures.npz', \
-                    'emitter_pattern.npy', \
-                    'ir_emitters.npy', \
+                    'dynamic_packet.txt', \
                     'test_setup.txt', \
                     'yield.txt', \
+                    # 'averaged.npz', \
                 )
     
 # Get the directory to copy
