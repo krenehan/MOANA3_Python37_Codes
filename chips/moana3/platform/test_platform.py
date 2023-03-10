@@ -559,5 +559,144 @@ class TestPlatform:
         self.tiehi_signal('dynamic_pattern_pipe_in_complete')
        
         
+    # ====================================================
+    # Update the vcsel data bits in the registers
+    # ====================================================        
+    def update_nir_vcsel_data_bits(self, v1):
         
+                               
+        if v1 < 0.2:
+            raise ValueError("The minium value of NIR bias should be" + str(0.2) + "V" + "!")      
+            
+        elif v1 > 2.4:
+            raise ValueError("The maxium value of NIR bias cannot exceed " + str(2.4) + "V" + "!")     
+                
+        if (v1 == 0.2):
+            div_val_1 = 127
+        elif (v1 == 0.3):
+            div_val_1 = 125  
+        elif (v1 == 0.4):
+            div_val_1 = 122              
+        elif (v1 == 0.5):
+            div_val_1 = 119  
+        elif (v1 == 0.6):
+            div_val_1 = 115   
+        elif (v1 == 0.7):
+            div_val_1 = 112  
+        elif (v1 == 0.8):
+            div_val_1 = 108   
+        elif (v1 == 0.9):
+            div_val_1 = 104  
+        elif (v1 == 1.0):
+            div_val_1 = 100   
+        elif (v1 == 1.1):
+            div_val_1 = 96  
+        elif (v1 == 1.2):
+            div_val_1 = 91   
+        elif (v1 == 1.3):
+            div_val_1 = 86  
+        elif (v1 == 1.4):
+            div_val_1 = 81              
+        elif (v1 == 1.5):
+            div_val_1 = 75  
+        elif (v1 == 1.6):
+            div_val_1 = 70   
+        elif (v1 == 1.7):
+            div_val_1 = 64  
+        elif (v1 == 1.8):
+            div_val_1 = 57   
+        elif (v1 == 1.9):
+            div_val_1 = 50  
+        elif (v1 == 2.0):
+            div_val_1 = 43   
+        elif (v1 == 2.1):
+            div_val_1 = 35  
+        elif (v1 == 2.2):
+            div_val_1 = 27    
+        elif (v1 == 2.3):
+            div_val_1 = 18  
+        else:
+            div_val_1 = 8    
+            
+        return div_val_1
+    
+    # ====================================================
+    # Update the vcsel data bits in the registers
+    # ====================================================        
+    def update_ir_vcsel_data_bits(self, v2):
+        
+                               
+        # max_data_bits = 2**7-1
+        
+        if v2 < 0.2:
+            raise ValueError("The minium value of IR bias should be (" + str(0.2) + ")" + "!")      
+            
+        elif v2 > 2.4:
+            raise ValueError("The maxium value of IR bias cannot exceed (" + str(2.4) + ")" + "!")      
+                
+        elif (v2 == 0.2):
+            div_val_2 = 127
+        elif (v2 == 0.3):
+            div_val_2 = 125  
+        elif (v2 == 0.4):
+            div_val_2 = 122              
+        elif (v2 == 0.5):
+            div_val_2 = 119  
+        elif (v2 == 0.6):
+            div_val_2 = 115   
+        elif (v2 == 0.7):
+            div_val_2 = 112  
+        elif (v2 == 0.8):
+            div_val_2 = 108   
+        elif (v2 == 0.9):
+            div_val_2 = 104  
+        elif (v2 == 1.0):
+            div_val_2 = 100   
+        elif (v2 == 1.1):
+            div_val_2 = 95  
+        elif (v2 == 1.2):
+            div_val_2 = 90   
+        elif (v2 == 1.3):
+            div_val_2 = 85  
+        elif (v2 == 1.4):
+            div_val_2 = 80              
+        elif (v2 == 1.5):
+            div_val_2 = 75  
+        elif (v2 == 1.6):
+            div_val_2 = 69   
+        elif (v2 == 1.7):
+            div_val_2 = 63  
+        elif (v2 == 1.8):
+            div_val_2 = 56   
+        elif (v2 == 1.9):
+            div_val_2 = 49  
+        elif (v2 == 2.0):
+            div_val_2 = 42   
+        elif (v2 == 2.1):
+            div_val_2 = 34  
+        elif (v2 == 2.2):
+            div_val_2 = 25    
+        elif (v2 == 2.3):
+            div_val_2 = 17  
+        else:
+            div_val_2 = 7    
+            
+        return div_val_2
+         
+    # ====================================================
+    # update vcsel data bits
+    # ====================================================
+    def update_vcsel_data_bits(self, v1, v2):
+        div_val_1 = self.update_nir_vcsel_data_bits(v1)
+        div_val_2 = self.update_ir_vcsel_data_bits(v2)
+        
+        vcsel_data_val = (div_val_2 << 8) + div_val_1 
+        
+        self.fpga_interface.wire_in(addr.ADDR_WIREIN_VCSEL_DATA_BITS, vcsel_data_val)  
+        
+    # ====================================================
+    # Activate input vcsel trigger
+    # ====================================================
+    def vcsel_enable_trigger(self):
+        return self.fpga_interface.trigger_in(addr.ADDR_TRIGGERIN_VCSELENABLE , sig.TRIGGER_VCSEL_ENABLE)        
         
