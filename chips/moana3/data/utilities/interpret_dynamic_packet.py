@@ -17,13 +17,13 @@ def interpret_dynamic_packet():
     filelist = os.listdir()
     
     # Look for previously generated accumulated file
-    print("Searching for dynamic packet file")
+    # print("Searching for dynamic packet file")
     found = False
     for f in range(len(filelist)):
         
         # Look for accumulated tag
         if 'dynamic_packet.txt' in filelist[f]:
-            print("Found dynamic packet file")
+            # print("Found dynamic packet file")
             found = True
     
     # Test setup file must be present
@@ -31,7 +31,7 @@ def interpret_dynamic_packet():
         raise Exception("Dynamic packet file not found")
         
     # Load
-    print("Opening dynamic packet file")
+    # print("Opening dynamic packet file")
     f = open("dynamic_packet.txt", 'r')
     ll = f.readlines() 
     f.close()
@@ -50,9 +50,6 @@ def interpret_dynamic_packet():
         
     # Number of wavelengths
     number_of_wavelengths = 2
-    
-    # Interpret
-    print("Interpreting emitter pattern file")
     
     # Find the emitter in each pattern
     vcsel_enable, nir_vcsel_enable, ir_vcsel_enable = False, False, False
@@ -87,19 +84,19 @@ def interpret_dynamic_packet():
         # Find nir_vcsel_enable
         if ("nir_vcsel_enable" in l) and ("1" in l):
             nir_vcsel_enable = True
-            print("nir_vcsel_enable found in line {} for pattern {} chip {}".format(i, pattern, chip))
+            # print("nir_vcsel_enable found in line {} for pattern {} chip {}".format(i, pattern, chip))
             continue
         
         # Find ir_vcsel_enable
         if ("ir_vcsel_enable" in l) and ("1" in l):
             ir_vcsel_enable = True
-            print("ir_vcsel_enable found in line {} for pattern {} chip {}".format(i, pattern, chip))
+            # print("ir_vcsel_enable found in line {} for pattern {} chip {}".format(i, pattern, chip))
             continue
         
         # Find vcsel_enable
         if ("vcsel_enable" in l) and ("1" in l):
             vcsel_enable = True
-            print("vcsel_enable found in line {} for pattern {} chip {}".format(i, pattern, chip))
+            # print("vcsel_enable found in line {} for pattern {} chip {}".format(i, pattern, chip))
             continue
     
     # Return
