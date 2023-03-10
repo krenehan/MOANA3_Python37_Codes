@@ -2,7 +2,13 @@
 """
 Created on Tue Feb  1 17:43:11 2022
 
-@author: Kevin Renehan
+@purpose:   Prepare phantom experiment data for reconstruction.
+
+@usage:     Standalone or in target script.
+
+@prereqs:   zip_files()
+
+@author:    Kevin Renehan
 
 """
 
@@ -16,6 +22,18 @@ from interpret_yield import interpret_yield
 
 def prepare_for_reconstruction(capture_window = None):
     
+    # This directory
+    this_dir = os.path.basename(os.getcwd())
+    
+    # This function
+    this_func = "prepare_hbo2_for_reconstruction"
+    
+    # Print header
+    header = "    " + this_func + " in " + this_dir + ": "
+    
+    # Starting
+    print(header + "Starting")
+    
     # Check for capture window
     if capture_window == None:
         capture_window_specified = False
@@ -26,58 +44,59 @@ def prepare_for_reconstruction(capture_window = None):
     filelist = os.listdir()
     
     # Look for previously generated accumulated file
-    print("Searching for zipped captures file, emitter pattern file, test setup, and yield file")
+    print(header + "Searching for zipped captures file, emitter pattern file, test setup, and yield file")
     found = True
         
     # Look for captures file
     if 'captures.npz' not in filelist:
-        print("Could not find zipped captures file")
+        print(header + "Could not find zipped captures file")
         found = False
     else:
-        print("Found zipped captures file")
+        print(header + "Found zipped captures file")
 
         
     # Look for emitter pattern file
     if 'emitter_pattern.npy' not in filelist:
-        print("Could not find emitter pattern file")
+        print(header + "Could not find emitter pattern file")
         found = False
     else:
-        print("Found emitter pattern file")
+        print(header + "Found emitter pattern file")
         
     # Look for test setup file
     if 'test_setup.txt' not in filelist:
-        print("Could not find test setup file")
+        print(header + "Could not find test setup file")
         found = False
     else:
-        print("Found test setup file")
+        print(header + "Found test setup file")
         
     # Look for yield file
     if 'yield.txt' not in filelist:
-        print("Could not find yield file")
+        print(header + "Could not find yield file")
         found = False
     else:
-        print("Found yield file")
+        print(header + "Found yield file")
             
     if not found:
         
-        raise Exception("One or more files not found")
+        print(header + "One or more necessary files not found")
+        return -1
         
     else:
         
         # Load
-        print("Loading captures file")
+        print(header + "Loading captures file")
         arr = np.load('captures.npz')['data']
         
         # Load emitter pattern file
-        print("Loading emitter pattern file")
+        print(header + "Loading emitter pattern file")
         ep = interpret_emitter_pattern()
         
         # Interpret test setup
-        print("Loading test setup file")
+        print(header + "Loading test setup file")
         ts = interpret_test_setup()
         
         # Used detectors
-        print("Loading yield file")
+        print(header + "Loading yield file")
         working_sources, working_detectors =  interpret_yield()
         
         # Get shape
@@ -95,35 +114,41 @@ def prepare_for_reconstruction(capture_window = None):
         # If we have a custom capture window, we redefine the number of captures to be included
         if capture_window_specified:
             if capture_window[0] >= capture_window[1]:
-                raise Exception("Second index of capture window greater than or equal to first index")
+                print(header + "Second index of capture window greater than or equal to first index")
+                return -1
             if capture_window[0] < 0:
-                raise Exception("First index of capture window is less than 0")
+                print(header + "First index of capture window is less than 0")
+                return -1
             if capture_window[0] > len(arr):
-                raise Exception("First index of capture window is greater than the number of captures")
+                print(header + "First index of capture window is greater than the number of captures")
+                return -1
             if capture_window[1] < 0:
-                raise Exception("Second index of capture window is less than 0")
+                print(header + "Second index of capture window is less than 0")
+                return -1
             if capture_window[1] > len(arr):
-                raise Exception("Second index of capture window is greater than the number of captures")
+                print(header + "Second index of capture window is greater than the number of captures".format)
+                return -1
             arr = arr[capture_window[0]:capture_window[1]]
+            number_of_captures = capture_window[1] - capture_window[0]
         
         # Fill capture_window if not specified
         else:
             capture_window = (0, number_of_captures)
         
         # Average
-        print("Averaging captures")
+        print(header + "Averaging captures")
         acc = np.mean(arr, axis=0)
 
         # Create final array
         final = np.zeros((number_of_chips, number_of_chips, number_of_bins), dtype=float)
         
         # Fill final array
-        print("Filling output array")
+        print(header + "Filling output array")
         for s in range(number_of_chips):
             
             # Check to see if the source is functional
             if not (s in working_sources):
-                print("Skipping source " + str(s) + " because it is non-functional")
+                print(header + "Skipping source " + str(s) + " because it is non-functional")
                 continue
             
             # Find the source index
@@ -143,8 +168,8 @@ def prepare_for_reconstruction(capture_window = None):
                 if chip in working_detectors:
                     final[s][chip] = acc[chip][0][pattern_index]
                 else:
-                    print("Skipping detector " + str(chip) + " because it is non-functional")
-            print("Filled index " + str(s) + " of final array with data from pattern " + str(pattern_index))
+                    print(header + "Skipping detector " + str(chip) + " because it is non-functional")
+            print(header + "Filled index " + str(s) + " of final array with data from pattern " + str(pattern_index))
 
         # Create time axis
         t = np.linspace(0, 149, num=150, dtype=int) * 65
@@ -183,7 +208,7 @@ def prepare_for_reconstruction(capture_window = None):
             filestring = 'reconstruction_data'
             
         # Save accumulated results
-        print("Saving averaged .mat file")
+        print(header + "Saving averaged .mat file")
         savemat(filestring + '.mat', ddict)
         
         # Create readme string
@@ -231,7 +256,7 @@ If source is not found in functional_sources, this means that the source was not
         '''
         
         # Save a readme file
-        print("Saving MATLAB readme file")
+        print(header + "Saving MATLAB readme file")
         f = open("reconstruction_data_mat_README.txt", "w")
         f.write(st)
         f.close()
@@ -245,7 +270,7 @@ If source is not found in functional_sources, this means that the source was not
         #     for d in range(len(ax)):
         #         ax[d].plot(t, acc_shuffled[s][d])
         
-        print("Saving .npz file")
+        print(header + "Saving .npz file")
         np.savez_compressed ( \
                             filestring, \
                             conditions = ts['Conditions'], \
@@ -311,10 +336,11 @@ If source is not found in functional_sources, this means that the source was not
         '''
             
         # Save a readme file
-        print("Saving Python readme file")
+        print(header + "Saving Python readme file")
         f = open("reconstruction_data_npz_README.txt", "w")
         f.write(st)
         f.close()
-            
-        print("Done")
+        
+        print(header + "Done")
+        return 0
 

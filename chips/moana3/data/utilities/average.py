@@ -2,49 +2,92 @@
 """
 Created on Tue Feb  1 17:43:11 2022
 
-@author: Dell-User
+@purpose:   Averages captures in captures.npz to create averaged.npz. 
 
-Run zip.py before accumulating
+@usage:     Standalone or in target script.
+
+@prereqs:   zip_files()
+
+@author:    Kevin Renehan
 """
 
 import numpy as np
 import os
-import matplotlib.pyplot as plt
 
 def average():
+    
+    # This directory
+    this_dir = os.path.basename(os.getcwd())
+    
+    # This function
+    this_func = "average"
+    
+    # Print header
+    header = "    " + this_func + " in " + this_dir + ": "
+    
+    # File name
+    filename = 'averaged.npz'
 
     # Directory info
     filelist = os.listdir()
     
-    # Look for previously generated accumulated file
-    print("Searching for zipped captures file")
+    # Check to see if averaged file has been generated
+    if filename in filelist:
+        print(header + filename + " already generated")
+        return 1
+    
+    # Look for captures.npz
     found = False
     for f in range(len(filelist)):
         
         # Look for accumulated tag
         if 'captures.npz' in filelist[f]:
-            print("Found zipped captures file")
             found = True
             
     if not found:
         
-        raise Exception("Zipped captures file not found")
+        print(header + "Zipped captures file not found")
+        return -1
         
     else:
         
         # Load
-        print("Loading captures file")
         arr = np.load('captures.npz')['data']
         
         # Get shape
         number_of_captures, number_of_chips, number_of_frames, patterns_per_frame, number_of_bins = np.shape(arr)
         
         # Accumulate
-        print("Averaging captures")
         acc = np.mean(arr, axis=0)
             
         # Save accumulated results
-        print("Saving averaged file")
-        np.savez_compressed('averaged.npz', data=acc)
+        print(header + "Saving averaged file")
+        np.savez_compressed(filename, data=acc)
         
-        print("Done")
+    # Done
+    print(header + "Finished")
+    return 0
+
+
+
+
+
+
+# For standalone runs
+# Requires that zip_files has already been run in target directory
+if __name__ in '__main__':
+    
+    import easygui
+    
+    # Select a data directory
+    target_dir = easygui.diropenbox(title="Choose directory containing captures.npz")
+    
+    # Check
+    if target_dir == None:
+        raise Exception("Target directory not provided")
+    
+    # Move to data directory
+    os.chdir(target_dir)
+    
+    # Run function
+    average()

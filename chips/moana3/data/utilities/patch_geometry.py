@@ -2,7 +2,14 @@
 """
 Created on Thu Feb  3 16:19:29 2022
 
-@author: Dell-User
+@purpose:   Creates source-detector geometry directory for a top level directory. 
+
+@usage:     Standalone or in target script.
+
+@prereqs:   None.
+
+@author:    Kevin Renehan
+
 """
 
 #%% Setup code
@@ -13,7 +20,27 @@ import os
 from scipy.io import savemat
 
 def patch_geometry():
-# if True:
+    
+    # This directory
+    this_dir = os.path.basename(os.getcwd())
+    
+    # This function
+    this_func = "patch_geometry"
+    
+    # Print header
+    header = "    " + this_func + " in " + this_dir + ": "
+    
+    # Starting
+    print(header + "Starting")
+    
+    # Filename to generate
+    filename = 'src_det_positions'
+    
+    # Check if we've already generated these files
+    l = os.listdir()
+    if ((filename + ".mat") in l) and ((filename + ".npz") in l):
+        print(header + filename + ".mat and " + filename + ".npz found")
+        return 1
     
     # Specify source rows and source columns
     rows = 4
@@ -43,7 +70,6 @@ def patch_geometry():
     y_margin = ((scene_extent_y[1] - scene_extent_y[0]) - (pitch * (rows-1))) / 2
     
     # Calculate source detector locations
-    print("Calculating source/detector coordinates")
     flat_idx = 0
     for r in range(rows):
         
@@ -71,7 +97,6 @@ def patch_geometry():
             flat_idx += 1 
             
     # Plot for verification
-    print("Plotting source/detector positions")
     plt.scatter(nir_src_pos_x, nir_src_pos_y, color='red', label="NIR", s=10)
     plt.scatter(ir_src_pos_x, nir_src_pos_y, color='purple', label="IR", s=10)
     plt.scatter(det_pos_x, det_pos_y, color='green', label="Det", s=10)
@@ -83,16 +108,14 @@ def patch_geometry():
     plt.axhline(y=0, color='blue', linestyle='--')
     plt.style.use('dark_background')
     plt.legend()
-    plt.savefig("src_det_positions.png", transparent=True)
+    plt.savefig(filename + ".png", transparent=True)
     plt.show()
     
     # Save the mat file
-    print("Saving .mat file")
     mdict = {'nir_src_pos_x': nir_src_pos_x, 'nir_src_pos_y': nir_src_pos_y, 'ir_src_pos_x': ir_src_pos_x, 'ir_src_pos_y': ir_src_pos_y, 'det_pos_x': det_pos_x, 'det_pos_y': det_pos_y}
-    savemat("src_det_positions.mat", mdict)
+    savemat(filename + ".mat", mdict)
     
     # Create README
-    print("Creating README")
     st = \
 '''######################### KEYS #########################
 nir_src_pos_x  - x-coordinates of NIR source positions in mm.
@@ -121,16 +144,14 @@ Note that all source and detector positions assume origin in the exact center of
 
 '''
     
-    f = open('src_det_positions_mat_README.txt', 'w')
+    f = open(filename + '_mat_README.txt', 'w')
     f.write(st)
     f.close()
     
     ###### PYTHON ######
     # Save the npz file
-            
-    print("Saving .npz file")
     np.savez_compressed ( \
-                        "src_det_positions", \
+                        filename, \
                         nir_src_pos_x = nir_src_pos_x, \
                         nir_src_pos_y = nir_src_pos_y, \
                         ir_src_pos_x = ir_src_pos_x, \
@@ -139,7 +160,6 @@ Note that all source and detector positions assume origin in the exact center of
                         det_pos_y = det_pos_y )
     
     # Create README
-    print("Creating python README")
     st = \
 '''######################### KEYS #########################
 nir_src_pos_x  - x-coordinates of NIR source positions in mm.
@@ -168,13 +188,12 @@ Note that all source and detector positions assume origin in the exact center of
 
 '''
     
-    f = open('src_det_positions_npz_README.txt', 'w')
+    f = open(filename + '_npz_README.txt', 'w')
     f.write(st)
     f.close()
     
     
     ##### TEXT FILE #####
-    print("Creating source/detector position text file")
     st = \
 '''Note that all source and detector positions assume origin in the exact center of the phantom.
 
@@ -203,9 +222,35 @@ Note that all source and detector positions assume origin in the exact center of
     for i in range(len(det_pos_x)):
         st = st + "Detector {}: ({}, {})\n".format(i, det_pos_x[i], det_pos_y[i])
         
-    f = open('src_det_positions.txt', 'w')
+    f = open(filename + ".txt", 'w')
     f.write(st)
     f.close()
     
+    # Done
+    print(header + "Finished")
+    return 0
+
+
+
+# For standalone runs
+if __name__ in '__main__':
     
+    import easygui
+    
+    # Select a data directory
+    target_dir = easygui.diropenbox(title="Choose top level directory")
+    
+    # Check
+    if target_dir == None:
+        raise Exception("Target directory not provided")
+    
+    # Move to data directory
+    os.chdir(target_dir)
+    
+    if 'source_detector_positions' not in os.listdir():
+        os.mkdir('source_detector_positions')
+    os.chdir('source_detector_positions')
+    
+    # Run function
+    patch_geometry()
     

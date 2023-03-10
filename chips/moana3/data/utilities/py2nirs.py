@@ -2,19 +2,22 @@
 """
 Created on Fri Mar  3 14:44:22 2023
 
-Function to generate .nirs file from raw data captures.
+@purpose:   Generates .nirs file from captures.npz and SD file.
 
-@author: bmc06
+@usage:     Standalone or in target script.
+
+@prereqs:   zip_files()
+
+@author:    Kevin Renehan and Jinwon Kim
 """
+
 
 import numpy as np
 import os
 from scipy.io import loadmat, savemat
-
 from interpret_test_setup import interpret_test_setup
 from interpret_yield import interpret_yield
 from interpret_dynamic_packet import interpret_dynamic_packet
-
 
 
 def py2nirs(sd_filepath, capture_window = None):
@@ -31,10 +34,29 @@ def py2nirs(sd_filepath, capture_window = None):
     ANCHORS = 21
     MEAS_UNIT = 23
     
+    # File to generate
+    nirs_file_name = 'data_r1.nirs'
+    
+    # This directory
+    this_dir = os.path.basename(os.getcwd())
+    
+    # This function
+    this_func = "py2nirs"
+    
+    # Print header
+    header = "    " + this_func + " in " + this_dir + ": "
+    
+    # Starting
+    print(header + "Starting")
+    
+    # Check if file has already been generated
+    if nirs_file_name in os.listdir():
+        print(header + nirs_file_name + " already generated")
+        return 1
+    
     # Check that SD file was provided
     if sd_filepath is None:
-        print("SD file not provided to py2nirs function")
-        print("NIRS file not generated")
+        print(header + "ERROR - SD file not provided")
         return -1
     
     # Attempt to load SD structure from mat file
@@ -44,9 +66,8 @@ def py2nirs(sd_filepath, capture_window = None):
     if 'SD' in mdict:
         sd = mdict['SD']
     else:
-        print("SD structure not found in SD file at " + str(sd_filepath))
-        print("NIRS file not generated")
-        # return -1
+        print(header + "ERROR - SD structure not found in SD file at " + str(sd_filepath))
+        return -1
         
     # Get map of flattened indices
     flat_index_map = np.transpose(sd[0][0][MEAS_LIST], axes=(1,0))
@@ -61,57 +82,58 @@ def py2nirs(sd_filepath, capture_window = None):
     filelist = os.listdir()
     
     # Look for previously generated accumulated file
-    print("Searching for zipped captures file, emitter pattern file, test setup, and yield file")
+    print(header + "Searching for zipped captures file, emitter pattern file, test setup, and yield file")
     found = True
         
     # Look for captures file
     if 'captures.npz' not in filelist:
-        print("Could not find zipped captures file")
+        print(header + "Could not find zipped captures file")
         found = False
     else:
-        print("Found zipped captures file")
+        print(header + "Found zipped captures file")
 
         
     # Look for emitter pattern file
     if 'dynamic_packet.txt' not in filelist:
-        print("Could not find dynamic packet file")
+        print(header + "Could not find dynamic packet file")
         found = False
     else:
-        print("Found dynamic packet file")
+        print(header + "Found dynamic packet file")
         
     # Look for test setup file
     if 'test_setup.txt' not in filelist:
-        print("Could not find test setup file")
+        print(header + "Could not find test setup file")
         found = False
     else:
-        print("Found test setup file")
+        print(header + "Found test setup file")
         
     # Look for yield file
     if 'yield.txt' not in filelist:
-        print("Could not find yield file")
+        print(header + "Could not find yield file")
         found = False
     else:
-        print("Found yield file")
+        print(header + "Found yield file")
     
     # Check that we found all the files
     if not found:
         
-        raise Exception("One or more files not found")
+        print(header + "ERROR - One or more necessary files not found")
+        return -1
         
     # Load captures
-    print("Loading captures file")
+    print(header + "Loading captures file")
     capture_data = np.load('captures.npz')['data']
     
     # Load emitter pattern file
-    print("Loading dynamic file")
+    print(header + "Loading dynamic file")
     ep = interpret_dynamic_packet()
     
     # Interpret test setup
-    print("Loading test setup file")
+    print(header + "Loading test setup file")
     ts = interpret_test_setup()
     
     # Used detectors
-    print("Loading yield file")
+    print(header + "Loading yield file")
     working_nir_sources, working_ir_sources, working_detectors =  interpret_yield()
     
     # Get shape of captures
@@ -155,7 +177,7 @@ def py2nirs(sd_filepath, capture_window = None):
     final = np.zeros((number_of_chips, number_of_wavelengths, number_of_chips, number_of_captures, number_of_bins), dtype=float)
     
     # Fill final array
-    print("Filling output array")
+    print(header + "Filling output array")
     for s in range(number_of_chips):
         
         # Defaults
@@ -170,27 +192,27 @@ def py2nirs(sd_filepath, capture_window = None):
         if len(nir_idx) > 0:
             do_nir = True
             nir_idx = nir_idx[0]
-            # print("Source {} is NIR emitter for pattern {}".format(s, nir_idx))
+            # print(header + "Source {} is NIR emitter for pattern {}".format(s, nir_idx))
         else:
-            print("Source {} was not used as an NIR emitter".format(s))
+            print(header + "Source {} was not used as an NIR emitter".format(s))
             
         # Mask based on whether or not a value was found
         if len(ir_idx) > 0:
             do_ir = True
             ir_idx = ir_idx[0]
-            # print("Source {} is IR emitter for pattern {}".format(s, ir_idx))
+            # print(header + "Source {} is IR emitter for pattern {}".format(s, ir_idx))
         else:
-            print("Source {} was not used as an IR emitter".format(s))
+            print(header + "Source {} was not used as an IR emitter".format(s))
         
         # Check to see if the source is functional
         if s not in working_nir_sources:
             do_nir = False
-            print("Skipping NIR data for source " + str(s) + " because it is non-functional")
+            print(header + "Skipping NIR data for source " + str(s) + " because it is non-functional")
            
         # Check to see if the source is functional
         if s not in working_ir_sources:
             do_ir = False
-            print("Skipping IR data for source " + str(s) + " because it is non-functional")
+            print(header + "Skipping IR data for source " + str(s) + " because it is non-functional")
         
         # Fill
         for d in range(number_of_chips):
@@ -200,8 +222,8 @@ def py2nirs(sd_filepath, capture_window = None):
                 if do_ir:
                     final[s][1][d] = capture_data[ir_idx][d]
             else:
-                print("Skipping detector " + str(d) + " because it is non-functional")
-        print("Filled index for source {} of final array with NIR data from pattern {} and IR data from pattern {}".format(s, nir_idx, ir_idx))
+                print(header + "Skipping detector " + str(d) + " because it is non-functional")
+        print(header + "Filled index for source {} of final array with NIR data from pattern {} and IR data from pattern {}".format(s, nir_idx, ir_idx))
     
     # Integrate bins, reshape to flatten, transpose
     final = np.sum(final, axis=4)
@@ -217,12 +239,13 @@ def py2nirs(sd_filepath, capture_window = None):
                 # Get the index
                 idx = (flat_index_map[0]-1 == s) & (flat_index_map[1]-1 == d) & (flat_index_map[3]-1 == w)
                 if len(idx.nonzero()) > 1:
-                    raise Exception("More than one entry for source {}, detector {}, wavelength {} in measurement channel list")
+                    print(header + "ERROR - More than one entry for source {}, detector {}, wavelength {} in measurement channel list")
+                    return -1
                 else:
                     idx = idx.nonzero()[0][0]
                     
                 # Fill
-                # print("Filled index {} of flattened array with data from source {}, detector {}, wavelength {}".format(idx, s, d, w))
+                # print(header + "Filled index {} of flattened array with data from source {}, detector {}, wavelength {}".format(idx, s, d, w))
                 flattened_arr[idx] = final[s][w][d]
                 
     # Transpose to shape number_of_captures x sources*detectors*wavelengths
@@ -253,8 +276,12 @@ def py2nirs(sd_filepath, capture_window = None):
     ddict['aux'] = aux
         
     # Save accumulated results
-    print("Saving data.nirs file")
-    savemat('data_r1.nirs', ddict, appendmat=False, oned_as='column')
+    print(header + "Saving " + nirs_file_name + " file")
+    savemat(nirs_file_name, ddict, appendmat=False, oned_as='column')
+    
+    # Done
+    print(header + "Done")
+    return 0
     
 
 # For standalone runs

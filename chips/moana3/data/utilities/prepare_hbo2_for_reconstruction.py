@@ -2,7 +2,13 @@
 """
 Created on Tue Feb  1 17:43:11 2022
 
-@author: Kevin Renehan
+@purpose:   Prepare HbO2 experiment data for reconstruction.
+
+@usage:     Standalone or in target script.
+
+@prereqs:   zip_files()
+
+@author:    Kevin Renehan
 
 """
 
@@ -15,22 +21,63 @@ from interpret_dynamic_packet import interpret_dynamic_packet
 from interpret_yield import interpret_yield
 
 
-def prepare_hbo2_for_reconstruction(capture_window = None):
+def prepare_hbo2_for_reconstruction(capture_window = None, breath_hold_window = None):
+    
+    # This directory
+    this_dir = os.path.basename(os.getcwd())
+    
+    # This function
+    this_func = "prepare_hbo2_for_reconstruction"
+    
+    # Print header
+    header = "    " + this_func + " in " + this_dir + ": "
+    
+    # Starting
+    print(header + "Starting")
 
     # Subdirectory name
     subdirectory_name = "reconstruction_outputs\\"
     subdirectory_path = os.path.join(os.getcwd(), subdirectory_name)
+    
+    # Filename
+    filename = 'reconstruction_data'
+    filestring = os.path.join(subdirectory_path, filename)
+    
+    # Check to see if we've already generated the files for this data directory
+    if os.path.exists(subdirectory_path):
+        l = os.listdir(subdirectory_path)
+        if ((filename + '.mat') in l) and ((filename + '.npz') in l):
+            
+            # Finish
+            print(header + ".mat and .npz file already found in " + str(subdirectory_path))
+            return 1
     
     # Check for capture window
     if capture_window == None:
         capture_window_specified = False
     else:
         capture_window_specified = True
+        
+    # Check for breath hold window
+    if breath_hold_window == None:
+        breath_hold_window_specified = False
+    else:
+        breath_hold_window_specified = True
+        
+    # Check that breath hold window falls within capture window
+    if breath_hold_window_specified:
+        if (breath_hold_window[0] < capture_window[0]) or (breath_hold_window[1] > capture_window[1]):
+            print(header + "Breath hold window {} to {} does not fall within capture window {} to {}".format(breath_hold_window[0], breath_hold_window[1], capture_window[0], capture_window[1]))
+            print(header + "Will not include breath hold window in outputs") 
+            breath_hold_window_specified = False
     
     # Occlusion window
-    breath_hold_window = np.array((600, 900), dtype=int)
-    if capture_window_specified:
-        breath_hold_window = breath_hold_window - capture_window[0]
+    if breath_hold_window_specified:
+        breath_hold_window = np.array((breath_hold_window[0], breath_hold_window[1]), dtype=int)
+        if capture_window_specified:
+            breath_hold_window = breath_hold_window - capture_window[0]
+    else:
+        breath_hold_window = ()
 
     # Directory info
     l = os.listdir()
@@ -39,60 +86,59 @@ def prepare_hbo2_for_reconstruction(capture_window = None):
         if os.path.isfile(f):
             filelist.append(f)
             
-    
     # Look for previously generated accumulated file
-    print("Searching for zipped captures file, dynamic packet file, test setup, and yield file")
+    print(header + "Searching for zipped captures file, dynamic packet file, test setup, and yield file")
     found = True
         
     # Look for captures file
     if 'captures.npz' not in filelist:
-        print("Could not find zipped captures file")
+        print(header + "Could not find zipped captures file")
         found = False
     else:
-        print("Found zipped captures file")
-
+        print(header + "Found zipped captures file")
         
     # Look for emitter pattern file
     if 'dynamic_packet.txt' not in filelist:
-        print("Could not find dynamic packet file")
+        print(header + "Could not find dynamic packet file")
         found = False
     else:
-        print("Found dynamic packet file")
+        print(header + "Found dynamic packet file")
         
     # Look for test setup file
     if 'test_setup.txt' not in filelist:
-        print("Could not find test setup file")
+        print(header + "Could not find test setup file")
         found = False
     else:
-        print("Found test setup file")
+        print(header + "Found test setup file")
         
     # Look for yield file
     if 'yield.txt' not in filelist:
-        print("Could not find yield file")
+        print(header + "Could not find yield file")
         found = False
     else:
-        print("Found yield file")
+        print(header + "Found yield file")
             
     if not found:
         
-        raise Exception("One or more files not found")
+        print(header + "ERROR - One or more necessary files not found")
+        return -1
         
     else:
         
         # Load
-        print("Loading captures file")
+        print(header + "Loading captures file")
         arr = np.load('captures.npz')['data']
         
         # Load emitter pattern file (pattern, chip, wavelength) wavelength 0 is 680nm, wavelength 1 is 850nm
-        print("Loading dynamic packet file")
+        print(header + "Loading dynamic packet file")
         ep = interpret_dynamic_packet()
         
         # Interpret test setup
-        print("Loading test setup file")
+        print(header + "Loading test setup file")
         ts = interpret_test_setup()
         
         # Used detectors
-        print("Loading yield file")
+        print(header + "Loading yield file")
         working_nir_sources, working_ir_sources, working_detectors =  interpret_yield()
         
         # Create results directory
@@ -116,15 +162,20 @@ def prepare_hbo2_for_reconstruction(capture_window = None):
         # If we have a custom capture window, we redefine the number of captures to be included
         if capture_window_specified:
             if capture_window[0] >= capture_window[1]:
-                raise Exception("Second index of capture window greater than or equal to first index")
+                print(header + "Second index of capture window greater than or equal to first index")
+                return -1
             if capture_window[0] < 0:
-                raise Exception("First index of capture window is less than 0")
+                print(header + "First index of capture window is less than 0")
+                return -1
             if capture_window[0] > len(arr):
-                raise Exception("First index of capture window is greater than the number of captures")
+                print(header + "First index of capture window is greater than the number of captures")
+                return -1
             if capture_window[1] < 0:
-                raise Exception("Second index of capture window is less than 0")
+                print(header + "Second index of capture window is less than 0")
+                return -1
             if capture_window[1] > len(arr):
-                raise Exception("Second index of capture window is greater than the number of captures")
+                print(header + "Second index of capture window is greater than the number of captures".format)
+                return -1
             arr = arr[capture_window[0]:capture_window[1]]
             number_of_captures = capture_window[1] - capture_window[0]
         
@@ -142,7 +193,7 @@ def prepare_hbo2_for_reconstruction(capture_window = None):
         final = np.zeros((number_of_chips, number_of_wavelengths, number_of_chips, number_of_captures, number_of_bins), dtype=float)
         
         # Fill final array
-        print("Filling output array")
+        print(header + "Filling output array")
         for s in range(number_of_chips):
             
             # Defaults
@@ -157,27 +208,27 @@ def prepare_hbo2_for_reconstruction(capture_window = None):
             if len(nir_idx) > 0:
                 do_nir = True
                 nir_idx = nir_idx[0]
-                # print("Source {} is NIR emitter for pattern {}".format(s, nir_idx))
+                # print(header + "Source {} is NIR emitter for pattern {}".format(s, nir_idx))
             else:
-                print("Source {} was not used as an NIR emitter".format(s))
+                print(header + "Source {} was not used as an NIR emitter".format(s))
                 
             # Mask based on whether or not a value was found
             if len(ir_idx) > 0:
                 do_ir = True
                 ir_idx = ir_idx[0]
-                # print("Source {} is IR emitter for pattern {}".format(s, ir_idx))
+                # print(header + "Source {} is IR emitter for pattern {}".format(s, ir_idx))
             else:
-                print("Source {} was not used as an IR emitter".format(s))
+                print(header + "Source {} was not used as an IR emitter".format(s))
             
             # Check to see if the source is functional
             if s not in working_nir_sources:
                 do_nir = False
-                print("Skipping NIR data for source " + str(s) + " because it is non-functional")
+                print(header + "Skipping NIR data for source " + str(s) + " because it is non-functional")
                
             # Check to see if the source is functional
             if s not in working_ir_sources:
                 do_ir = False
-                print("Skipping IR data for source " + str(s) + " because it is non-functional")
+                print(header + "Skipping IR data for source " + str(s) + " because it is non-functional")
             
             # Fill
             for d in range(number_of_chips):
@@ -187,8 +238,8 @@ def prepare_hbo2_for_reconstruction(capture_window = None):
                     if do_ir:
                         final[s][1][d] = arr[ir_idx][d]
                 else:
-                    print("Skipping detector " + str(d) + " because it is non-functional")
-            print("Filled index for chip {} of final array with NIR data from pattern {} and IR data from pattern {}".format(s, nir_idx, ir_idx))
+                    print(header + "Skipping detector " + str(d) + " because it is non-functional")
+            print(header + "Filled index for chip {} of final array with NIR data from pattern {} and IR data from pattern {}".format(s, nir_idx, ir_idx))
 
         # Create time axis
         hist_t = np.linspace(0, 149, num=150, dtype=int) * 65
@@ -213,6 +264,7 @@ def prepare_hbo2_for_reconstruction(capture_window = None):
     working_detectors_matlab = [i+1 for i in working_detectors]
     working_nir_sources_matlab = [i+1 for i in working_nir_sources]
     working_ir_sources_matlab = [i+1 for i in working_ir_sources]
+    breath_hold_window_matlab = (breath_hold_window[0] + 1, breath_hold_window[1] + 1) if breath_hold_window_specified else ()
 
     # Create dictionary for save
     ddict = {}
@@ -225,7 +277,7 @@ def prepare_hbo2_for_reconstruction(capture_window = None):
     ddict['capture_rate'] = fps
     ddict['number_of_captures'] = number_of_captures
     ddict['capture_window'] = (capture_window[0]+1, capture_window[1]+1)
-    ddict['breath_hold_window'] = (breath_hold_window[0] + 1, breath_hold_window[1] + 1)
+    ddict['breath_hold_window'] = breath_hold_window_matlab
     ddict['number_of_detector_locations'] = number_of_chips
     ddict['number_of_source_locations'] = patterns_per_frame
     ddict['nir_source_wavelength'] = '680nm'
@@ -238,12 +290,9 @@ def prepare_hbo2_for_reconstruction(capture_window = None):
     ddict['number_of_bins'] = number_of_bins
     ddict['patch_location'] = ts['Patch Location']
     ddict['test_type'] = ts['Test Type']
-    
-    # Filename
-    filestring = os.path.join(subdirectory_path, 'reconstruction_data')
         
     # Save accumulated results
-    print("Saving averaged .mat file")
+    print(header + "Saving averaged .mat file")
     savemat(filestring + '.mat', ddict)
     
     # Create readme string
@@ -306,7 +355,7 @@ If a NIR/IR source is not found in functional_nir_sources/functional_ir_sources,
     '''
     
     # Save a readme file
-    print("Saving MATLAB readme file")
+    print(header + "Saving MATLAB readme file")
     f = open(os.path.join(subdirectory_path, "reconstruction_data_mat_README.txt"), "w")
     f.write(st)
     f.close()
@@ -320,7 +369,7 @@ If a NIR/IR source is not found in functional_nir_sources/functional_ir_sources,
     #     for d in range(len(ax)):
     #         ax[d].plot(t, acc_shuffled[s][d])
     
-    print("Saving .npz file")
+    print(header + "Saving .npz file")
     np.savez_compressed ( \
                         filestring, \
                         conditions = ts['Conditions'], \
@@ -331,8 +380,8 @@ If a NIR/IR source is not found in functional_nir_sources/functional_ir_sources,
                         integration_time = it, \
                         capture_rate = fps, \
                         number_of_captures = number_of_captures, \
-                        capture_window = (capture_window[0], capture_window[1]), \
-                        breath_hold_window = (breath_hold_window[0], breath_hold_window[1]), \
+                        capture_window = capture_window, \
+                        breath_hold_window = breath_hold_window, \
                         number_of_detector_locations = number_of_chips, \
                         number_of_source_locations = patterns_per_frame, \
                         nir_source_wavelength = '680nm', \
@@ -359,7 +408,7 @@ integration_time                  - Integration time (s) per source for the hist
 capture_rate                      - Captures per second. One capture is defined as all source/detector pairs at both wavelengths.
 number_of_captures                - Number of captures taken over the course of the experiment.
 capture_window                    - Selected captures from original data set.
-breath_hold_window                  - Captures during which strap was tightened to simulate venous occlusion. 
+breath_hold_window                - Captures during which strap was tightened to simulate venous occlusion. 
 number_of_detector_locations      - Number of detectors on the 4x4 array.
 number_of_source_locations        - Total number of source locations on the 4x4 array (2 wavelengths present at each location).
 nir_source_wavelength             - Wavelength of the NIR sources.
@@ -408,16 +457,43 @@ If source is not found in functional_sources, this means that the source was not
     '''
         
     # Save a readme file
-    print("Saving Python readme file")
+    print(header + "Saving Python readme file")
     f = open(os.path.join(subdirectory_path, "reconstruction_data_npz_README.txt"), "w")
     f.write(st)
     f.close()
     
     # Saving notes
-    print("Saving notes")
+    print(header + "Saving notes")
     f = open(os.path.join(subdirectory_path, "notes.txt"), "w")
     f.write(ts['Notes'])
     f.close()
         
-    print("Done")
+    print(header + "Done")
+    return 0
+
+
+# For standalone runs
+# Requires that zip_files has already been run in target directory
+if __name__ in '__main__':
+    
+    import easygui
+    
+    # Capture window
+    capture_window = None
+    
+    # Breath hold window
+    breath_hold_window = None
+    
+    # Select a data directory
+    target_dir = easygui.diropenbox(title="Choose directory containing captures file")
+    
+    # Check
+    if target_dir == None:
+        raise Exception("Target directory not provided")
+    
+    # Move to data directory
+    os.chdir(target_dir)
+    
+    # Run function
+    prepare_hbo2_for_reconstruction(capture_window = capture_window, breath_hold_window = breath_hold_window)
 
