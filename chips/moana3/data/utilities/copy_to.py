@@ -18,6 +18,8 @@ relevant_files = ( \
                     'test_setup.txt', \
                     'yield.txt', \
                     # 'averaged.npz', \
+                    'events.tsv', \
+                    'first_capture.txt', \
                 )
     
 # Get the directory to copy
