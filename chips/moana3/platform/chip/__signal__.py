@@ -23,6 +23,7 @@ SIGNAL_CLK_SELECT_1 =           0x0100
 
 # Trigger Ins
 TRIGGER_DATA_STREAM_READ_ACK = 0x0000
+TRIGGER_TTL =                  0x0001
 TRIGGER_VCSEL_ENABLE       =   0x0000 
 
 # Data stream trigger Outs

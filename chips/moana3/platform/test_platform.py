@@ -408,7 +408,14 @@ class TestPlatform:
     # Acknowledge the read trigger
     # ====================================================
     def acknowledge_read_trigger(self):
-        return self.fpga_interface.trigger_in(addr.ADDR_TRIGGER_IN_DATA_STREAM_READ_ACK , sig.TRIGGER_DATA_STREAM_READ_ACK)
+        return self.fpga_interface.trigger_in(addr.ADDR_TRIGGER_IN_SW , sig.TRIGGER_DATA_STREAM_READ_ACK)
+    
+    
+    # ====================================================
+    # Acknowledge the read trigger
+    # ====================================================
+    def ttl_trigger(self):
+        return self.fpga_interface.trigger_in(addr.ADDR_TRIGGER_IN_SW , sig.TRIGGER_TTL)
 
         
 #------------ Signal Out Checks  ---------------------
