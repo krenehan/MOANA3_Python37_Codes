@@ -27,18 +27,18 @@ from py2nirs import py2nirs
 
 
 # Options
-do_average = True
+do_average = False
 do_prepare_for_reconstruction = False
 do_prepare_hbo2_for_reconstruction = True
-do_patch_geometry = True
-do_py2nirs = True
+do_patch_geometry = False
+do_py2nirs = False
 
 # Capture window and breath hold window for reconstruction
 capture_window = None
-breath_hold_window = (600, 900)
+breath_hold_window = None #(600, 900)
 
 # SD structure for NIRS generation
-sd_filepath = r'C:\Users\Dell-User\Dropbox\MOANA\Homer3\new_moana3_probe\MOANA3_RIGID_4BY4_AF3-FP1.SD'
+sd_filepath = r'C:\Users\Dell-User\Dropbox\MOANA\Homer3\new_moana3_probe\MOANA3_RIGIDFLEX_4BY4_SOMATOSENSORY_3D.SD'
 
 
 
