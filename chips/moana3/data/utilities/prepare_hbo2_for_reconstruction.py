@@ -19,6 +19,7 @@ from pathlib import Path
 from interpret_test_setup import interpret_test_setup
 from interpret_dynamic_packet import interpret_dynamic_packet
 from interpret_yield import interpret_yield
+from process_triggers import process_triggers
 
 
 def prepare_hbo2_for_reconstruction(capture_window = None, breath_hold_window = None):
@@ -117,147 +118,203 @@ def prepare_hbo2_for_reconstruction(capture_window = None, breath_hold_window = 
         found = False
     else:
         print(header + "Found yield file")
-            
+    
+    # Check that all necessary files were found
     if not found:
-        
         print(header + "ERROR - One or more necessary files not found")
         return -1
+    
+    # Look for events.tsv file, first_capture.txt, and stim_timing.tsv files
+    trigger_file_dict = {'events.tsv': 'events.tsv' in filelist, \
+                         'first_capture.txt': 'first_capture.txt' in filelist, \
+                         'stim_protocol.tsv': 'stim_protocol.tsv' in filelist}
+    
+    # Determine if all necessary files were found for processing triggers
+    triggering_found = not (False in [trigger_file_dict[k] for k in trigger_file_dict])
+    
+    # If we didn't find these files, we won't process triggers
+    if triggering_found:
+        print(header + "Found optional trigger files and will process them")
+    else:
+        print(header + "Did not find all optional triggering files")
+        for k in trigger_file_dict:
+            if trigger_file_dict[k]:
+                print(header + k + " found")
+            else:
+                print(header + k + " not found")
+        
+    # Load
+    print(header + "Loading captures file")
+    arr = np.load('captures.npz')['data']
+    
+    # Load emitter pattern file (pattern, chip, wavelength) wavelength 0 is 680nm, wavelength 1 is 850nm
+    print(header + "Loading dynamic packet file")
+    ep = interpret_dynamic_packet()
+    
+    # Interpret test setup
+    print(header + "Loading test setup file")
+    ts = interpret_test_setup()
+    
+    # Used detectors
+    print(header + "Loading yield file")
+    working_nir_sources, working_ir_sources, working_detectors =  interpret_yield()
+    
+    # If triggering was used, process files
+    if triggering_found:
+        tr = process_triggers()
+        if tr < 0:
+            triggering_found = False
+    
+    # Create results directory
+    Path( subdirectory_path ).mkdir( parents=True, exist_ok=True )
+    
+    # Get shape
+    number_of_captures, number_of_chips, number_of_frames, patterns_per_frame, number_of_bins = np.shape(arr)
+    
+    # Set number of wavelengths
+    number_of_wavelengths = 2
+    
+    # Combine the capture and frame axes
+    arr = np.transpose(arr, axes=(0, 2, 1, 3, 4))
+    arr = np.reshape(arr, newshape=(number_of_captures*number_of_frames, 1, number_of_chips, patterns_per_frame, number_of_bins))
+    arr = np.transpose(arr, axes=(0, 2, 1, 3, 4))
+    
+    # Modify number of captures and frames
+    number_of_captures = number_of_captures * number_of_frames
+    number_of_frames = 1
+    
+    # If we have a custom capture window, we redefine the number of captures to be included
+    if capture_window_specified:
+        if capture_window[0] >= capture_window[1]:
+            print(header + "Second index of capture window greater than or equal to first index")
+            return -1
+        if capture_window[0] < 0:
+            print(header + "First index of capture window is less than 0")
+            return -1
+        if capture_window[0] > len(arr):
+            print(header + "First index of capture window is greater than the number of captures")
+            return -1
+        if capture_window[1] < 0:
+            print(header + "Second index of capture window is less than 0")
+            return -1
+        if capture_window[1] > len(arr):
+            print(header + "Second index of capture window is greater than the number of captures".format)
+            return -1
+        arr = arr[capture_window[0]:capture_window[1]]
+        number_of_captures = capture_window[1] - capture_window[0]
+    
+    # Fill capture_window if not specified
+    else:
+        capture_window = (0, number_of_captures)
+        
+    # Reshape array [pattern][chip][capture][bin]
+    arr = np.transpose(np.squeeze(arr), axes=(2,1,0,3))
+        
+    # Tranposed emitter pattern (wavelength, chip, pattern)
+    ep_T = np.transpose(ep, axes=(2,1,0))
+
+    # Create final array [source][wavelength][detector][capture][bin]
+    final = np.zeros((number_of_chips, number_of_wavelengths, number_of_chips, number_of_captures, number_of_bins), dtype=float)
+    
+    # Fill final array
+    print(header + "Filling output array")
+    for s in range(number_of_chips):
+        
+        # Defaults
+        do_nir = False
+        do_ir = False
+        
+        # Find the NIR pattern and IR pattern index for this source location
+        nir_idx = np.where(ep_T[0][s] == True)[0]
+        ir_idx = np.where(ep_T[1][s] == True)[0]
+        
+        # Mask based on whether or not a value was found
+        if len(nir_idx) > 0:
+            do_nir = True
+            nir_idx = nir_idx[0]
+            # print(header + "Source {} is NIR emitter for pattern {}".format(s, nir_idx))
+        else:
+            print(header + "Source {} was not used as an NIR emitter".format(s))
+            
+        # Mask based on whether or not a value was found
+        if len(ir_idx) > 0:
+            do_ir = True
+            ir_idx = ir_idx[0]
+            # print(header + "Source {} is IR emitter for pattern {}".format(s, ir_idx))
+        else:
+            print(header + "Source {} was not used as an IR emitter".format(s))
+        
+        # Check to see if the source is functional
+        if s not in working_nir_sources:
+            do_nir = False
+            print(header + "Skipping NIR data for source " + str(s) + " because it is non-functional")
+           
+        # Check to see if the source is functional
+        if s not in working_ir_sources:
+            do_ir = False
+            print(header + "Skipping IR data for source " + str(s) + " because it is non-functional")
+        
+        # Fill
+        for d in range(number_of_chips):
+            if d in working_detectors:
+                if do_nir:
+                    final[s][0][d] = arr[nir_idx][d]
+                if do_ir:
+                    final[s][1][d] = arr[ir_idx][d]
+            else:
+                print(header + "Skipping detector " + str(d) + " because it is non-functional")
+        print(header + "Filled index for chip {} of final array with NIR data from pattern {} and IR data from pattern {}".format(s, nir_idx, ir_idx))
+
+    # Create time axis
+    hist_t = np.linspace(0, 149, num=150, dtype=int) * 65
+    
+    # Calculate CW data
+    cw_data = np.sum(final, axis=(4,))
+    
+    # Calculate integration time
+    it = float(ts['Period']) * 1e-9 * float(ts['Measurements per Pattern'])
+    
+    # Calculate frame rate
+    fps = 1/(float(ts['Period']) * 1e-9 * float(ts['Measurements per Pattern']) * patterns_per_frame)
+    
+    # Time axis for experiment
+    t_step = 1 / fps
+    exp_t = np.arange(capture_window[0], capture_window[1] * t_step, t_step)
+
+    # If process triggers was completed successfully, we spit out the resulting file
+    if triggering_found:
+        
+        # Stim array and stim dictionary
+        np_tmp = np.load("stim.npz", allow_pickle=True)
+        stim_onset = np_tmp['stim_onset']
+        stim_boxcar = np_tmp['stim_boxcar']
+        stim_dict = np_tmp['stim_dict'][()]
+        
+        # Modify stim_dict for matlab
+        stim_dict_mat = {}
+        for field in stim_dict:
+            stim_dict_mat[field] = stim_dict[field] + 1
+        
+        # Window stim onset array
+        stim_onset = np.transpose(stim_onset, axes=(1,0))
+        stim_onset = stim_onset[capture_window[0]:capture_window[1]]
+        stim_onset = np.transpose(stim_onset, axes=(1,0))
+        
+        # Window stim boxcar array
+        stim_boxcar = np.transpose(stim_boxcar, axes=(1,0))
+        stim_boxcar = stim_boxcar[capture_window[0]:capture_window[1]]
+        stim_boxcar = np.transpose(stim_boxcar, axes=(1,0))
+        
+        # Number of stimuli
+        number_of_stimuli = len(stim_dict)
         
     else:
         
-        # Load
-        print(header + "Loading captures file")
-        arr = np.load('captures.npz')['data']
-        
-        # Load emitter pattern file (pattern, chip, wavelength) wavelength 0 is 680nm, wavelength 1 is 850nm
-        print(header + "Loading dynamic packet file")
-        ep = interpret_dynamic_packet()
-        
-        # Interpret test setup
-        print(header + "Loading test setup file")
-        ts = interpret_test_setup()
-        
-        # Used detectors
-        print(header + "Loading yield file")
-        working_nir_sources, working_ir_sources, working_detectors =  interpret_yield()
-        
-        # Create results directory
-        Path( subdirectory_path ).mkdir( parents=True, exist_ok=True )
-        
-        # Get shape
-        number_of_captures, number_of_chips, number_of_frames, patterns_per_frame, number_of_bins = np.shape(arr)
-        
-        # Set number of wavelengths
-        number_of_wavelengths = 2
-        
-        # Combine the capture and frame axes
-        arr = np.transpose(arr, axes=(0, 2, 1, 3, 4))
-        arr = np.reshape(arr, newshape=(number_of_captures*number_of_frames, 1, number_of_chips, patterns_per_frame, number_of_bins))
-        arr = np.transpose(arr, axes=(0, 2, 1, 3, 4))
-        
-        # Modify number of captures and frames
-        number_of_captures = number_of_captures * number_of_frames
-        number_of_frames = 1
-        
-        # If we have a custom capture window, we redefine the number of captures to be included
-        if capture_window_specified:
-            if capture_window[0] >= capture_window[1]:
-                print(header + "Second index of capture window greater than or equal to first index")
-                return -1
-            if capture_window[0] < 0:
-                print(header + "First index of capture window is less than 0")
-                return -1
-            if capture_window[0] > len(arr):
-                print(header + "First index of capture window is greater than the number of captures")
-                return -1
-            if capture_window[1] < 0:
-                print(header + "Second index of capture window is less than 0")
-                return -1
-            if capture_window[1] > len(arr):
-                print(header + "Second index of capture window is greater than the number of captures".format)
-                return -1
-            arr = arr[capture_window[0]:capture_window[1]]
-            number_of_captures = capture_window[1] - capture_window[0]
-        
-        # Fill capture_window if not specified
-        else:
-            capture_window = (0, number_of_captures)
-            
-        # Reshape array [pattern][chip][capture][bin]
-        arr = np.transpose(np.squeeze(arr), axes=(2,1,0,3))
-            
-        # Tranposed emitter pattern (wavelength, chip, pattern)
-        ep_T = np.transpose(ep, axes=(2,1,0))
-
-        # Create final array [source][wavelength][detector][capture][bin]
-        final = np.zeros((number_of_chips, number_of_wavelengths, number_of_chips, number_of_captures, number_of_bins), dtype=float)
-        
-        # Fill final array
-        print(header + "Filling output array")
-        for s in range(number_of_chips):
-            
-            # Defaults
-            do_nir = False
-            do_ir = False
-            
-            # Find the NIR pattern and IR pattern index for this source location
-            nir_idx = np.where(ep_T[0][s] == True)[0]
-            ir_idx = np.where(ep_T[1][s] == True)[0]
-            
-            # Mask based on whether or not a value was found
-            if len(nir_idx) > 0:
-                do_nir = True
-                nir_idx = nir_idx[0]
-                # print(header + "Source {} is NIR emitter for pattern {}".format(s, nir_idx))
-            else:
-                print(header + "Source {} was not used as an NIR emitter".format(s))
-                
-            # Mask based on whether or not a value was found
-            if len(ir_idx) > 0:
-                do_ir = True
-                ir_idx = ir_idx[0]
-                # print(header + "Source {} is IR emitter for pattern {}".format(s, ir_idx))
-            else:
-                print(header + "Source {} was not used as an IR emitter".format(s))
-            
-            # Check to see if the source is functional
-            if s not in working_nir_sources:
-                do_nir = False
-                print(header + "Skipping NIR data for source " + str(s) + " because it is non-functional")
-               
-            # Check to see if the source is functional
-            if s not in working_ir_sources:
-                do_ir = False
-                print(header + "Skipping IR data for source " + str(s) + " because it is non-functional")
-            
-            # Fill
-            for d in range(number_of_chips):
-                if d in working_detectors:
-                    if do_nir:
-                        final[s][0][d] = arr[nir_idx][d]
-                    if do_ir:
-                        final[s][1][d] = arr[ir_idx][d]
-                else:
-                    print(header + "Skipping detector " + str(d) + " because it is non-functional")
-            print(header + "Filled index for chip {} of final array with NIR data from pattern {} and IR data from pattern {}".format(s, nir_idx, ir_idx))
-
-        # Create time axis
-        hist_t = np.linspace(0, 149, num=150, dtype=int) * 65
-        
-        # Calculate CW data
-        cw_data = np.sum(final, axis=(4,))
-        
-        # Calculate integration time
-        it = float(ts['Period']) * 1e-9 * float(ts['Measurements per Pattern'])
-        
-        # Calculate frame rate
-        fps = 1/(float(ts['Period']) * 1e-9 * float(ts['Measurements per Pattern']) * patterns_per_frame)
-        
-        # Time axis for experiment
-        t_step = 1 / fps
-        exp_t = np.arange(capture_window[0], capture_window[1] * t_step, t_step)
-
-
+        # Create fake variables
+        number_of_stimuli = None
+        stim_onset = None
+        stim_boxcar = None
+        stim_dict = None
 
 
     ##### MATLAB #####
@@ -276,7 +333,7 @@ def prepare_hbo2_for_reconstruction(capture_window = None, breath_hold_window = 
     ddict['integration_time'] = it
     ddict['capture_rate'] = fps
     ddict['number_of_captures'] = number_of_captures
-    ddict['capture_window'] = (capture_window[0]+1, capture_window[1]+1)
+    ddict['capture_window'] = (capture_window[0]+1, capture_window[1])
     ddict['breath_hold_window'] = breath_hold_window_matlab
     ddict['number_of_detector_locations'] = number_of_chips
     ddict['number_of_source_locations'] = patterns_per_frame
@@ -290,6 +347,10 @@ def prepare_hbo2_for_reconstruction(capture_window = None, breath_hold_window = 
     ddict['number_of_bins'] = number_of_bins
     ddict['patch_location'] = ts['Patch Location']
     ddict['test_type'] = ts['Test Type']
+    ddict['number_of_stimuli'] = number_of_stimuli
+    ddict['stim_onset'] = stim_onset
+    ddict['stim_boxcar'] = stim_boxcar
+    ddict['stim_dict'] = stim_dict_mat
         
     # Save accumulated results
     print(header + "Saving averaged .mat file")
@@ -320,6 +381,10 @@ functional_ir_sources             - The IR source locations on the 4x4 array tha
 number_of_bins                    - The number of bins in a histogram.
 patch_location                    - Physical location of the 4x4 array during the experiment.
 test_type                         - Type of experiment that was performed.
+number_of_stimuli                 - Number of stimuli in experiment (including rest).
+stim_onset                        - Psuedo-delta function showing onset timing of stimuli. Shape is (number_of_stimuli, number_of_captures)
+stim_boxcar                       - Boxcar functions showing onset and duration of stimuli. Shape is (number_of_stimuli, number_of_captures). 
+stim_dict                         - Struct containing index of each stimuli in stim_onset. Number of fields is number_of_stimuli.
 
 ############################################ Source/Detector Mapping ############################################
   ___________________
@@ -338,17 +403,23 @@ test_type                         - Type of experiment that was performed.
 
 ############################################ Examples ############################################
 In Matlab, to plot the NIR histogram between Source Location 1 and Detector Location 9 for Capture 20:
---> source_location = 1
---> wavelength_index = 1
---> detector_location = 9
---> capture = 20
---> plot(hist_t, hist_data(source_location, wavelength_index, detector_location, capture))
+--> source_location = 1;
+--> wavelength_index = 1;
+--> detector_location = 9;
+--> capture = 20;
+--> plot(hist_t, squeeze(hist_data(source_location, wavelength_index, detector_location, capture, :)));
 
 In Matlab, to plot the IR CW time trace between Source 1 and Detector 9 over the entire experiment:
---> source_location = 1
---> wavelength_index = 2
---> detector_location = 9
---> plot(exp_t, cw_data(source_location, wavelength_index, detector_location))
+--> source_location = 1;
+--> wavelength_index = 2;
+--> detector_location = 9;
+--> plot(exp_t, squeeze(cw_data(source_location, wavelength_index, detector_location, :)));
+
+To add the thumb stimulation timing information to the plot above:
+--> hold on;
+--> stim_to_plot = stim_onset(stim_dict.thumb, :) * max(cw_data(source_location, wavelength_index, detector_location, :));
+--> plot(exp_t, stim_to_plot);
+--> hold off;
 
 The plots should have nonzero values if source is found in functional_sources. 
 If a NIR/IR source is not found in functional_nir_sources/functional_ir_sources, this means that the NIR/IR source was not working or not used in the experiment, and the histogram data will be all 0s.
@@ -394,6 +465,10 @@ If a NIR/IR source is not found in functional_nir_sources/functional_ir_sources,
                         number_of_bins = number_of_bins, \
                         patch_location = ts['Patch Location'], \
                         test_type = ts['Test Type'], \
+                        number_of_stimuli = number_of_stimuli, \
+                        stim_onset = stim_onset, \
+                        stim_boxcar = stim_boxcar, \
+                        stim_dict = stim_dict, \
                         )
     
     # Create readme string
@@ -421,6 +496,10 @@ functional_ir_sources             - The IR source locations on the 4x4 array tha
 number_of_bins                    - The number of bins in a histogram.
 patch_location                    - Physical location of the 4x4 array during the experiment.
 test_type                         - Type of experiment that was performed.
+number_of_stimuli                 - Number of stimuli in experiment (including rest).
+stim_onset                        - Psuedo-delta function showing onset timing of stimuli. Shape is (number_of_stimuli, number_of_captures)
+stim_boxcar                       - Boxcar functions showing onset and duration of stimuli. Shape is (number_of_stimuli, number_of_captures). 
+stim_dict                         - Dictionary containing index of each stimuli in stim_onset. Length is number_of_stimuli.
 
 ############################################ Source/Detector Mapping ############################################
   ___________________
@@ -451,6 +530,10 @@ In Python, to plot the IR CW time trace between Source 1 and Detector 9 over the
 --> wavelength_index = 2
 --> detector_location = 9
 --> plot(exp_t, cw_data[source_location][wavelength_index][detector_location])
+
+To add the thumb stimulation timing information to the plot above:
+--> stim_to_plot = stim_boxcar[stim_dict.thumb] * max(cw_data[source_location][wavelength_index][detector_location])
+--> plot(exp_t, stim_to_plot)
 
 The plot should have nonzero values if source is found in functional_sources. 
 If source is not found in functional_sources, this means that the source was not working or not used in the experiment, and the histogram data will be all 0s.
