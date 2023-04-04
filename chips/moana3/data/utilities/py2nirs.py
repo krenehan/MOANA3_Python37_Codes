@@ -18,6 +18,7 @@ from scipy.io import loadmat, savemat
 from interpret_test_setup import interpret_test_setup
 from interpret_yield import interpret_yield
 from interpret_dynamic_packet import interpret_dynamic_packet
+from process_triggers import process_triggers
 
 
 def py2nirs(sd_filepath, capture_window = None):
@@ -46,11 +47,14 @@ def py2nirs(sd_filepath, capture_window = None):
     # Print header
     header = "    " + this_func + " in " + this_dir + ": "
     
+    # Filelist
+    filelist = os.listdir()
+    
     # Starting
     print(header + "Starting")
     
     # Check if file has already been generated
-    if nirs_file_name in os.listdir():
+    if nirs_file_name in filelist:
         print(header + nirs_file_name + " already generated")
         return 1
     
@@ -77,9 +81,6 @@ def py2nirs(sd_filepath, capture_window = None):
         capture_window_specified = False
     else:
         capture_window_specified = True
-
-    # Directory info - we should be in the data directory
-    filelist = os.listdir()
     
     # Look for previously generated accumulated file
     print(header + "Searching for zipped captures file, emitter pattern file, test setup, and yield file")
@@ -251,8 +252,43 @@ def py2nirs(sd_filepath, capture_window = None):
     # Transpose to shape number_of_captures x sources*detectors*wavelengths
     flattened_arr = np.transpose(flattened_arr, axes=(1,0))
     
-    # Create empty s_array (number of triggers assumed to be 3)
-    s_arr = np.zeros((number_of_captures, 3))
+    # Look for events.tsv file, first_capture.txt, and stim_timing.tsv files
+    trigger_file_dict = {'events.tsv': 'events.tsv' in filelist, \
+                         'first_capture.txt': 'first_capture.txt' in filelist, \
+                         'stim_protocol.tsv': 'stim_protocol.tsv' in filelist}
+    
+    # Determine if all necessary files were found for processing triggers
+    triggering_found = not (False in [trigger_file_dict[k] for k in trigger_file_dict])
+    
+    # If we didn't find these files, we won't process triggers
+    if triggering_found:
+        print(header + "Found optional trigger files and will process them")
+    else:
+        print(header + "Did not find all optional triggering files")
+        for k in trigger_file_dict:
+            if trigger_file_dict[k]:
+                print(header + k + " found")
+            else:
+                print(header + k + " not found")
+                
+    # If triggering was used, process files
+    if triggering_found:
+        tr = process_triggers()
+        if tr < 0:
+            triggering_found = False
+    
+    # Create s_arr if trigger files were found
+    if triggering_found:
+        
+        # Stim array and stim dictionary
+        np_tmp = np.load("stim.npz", allow_pickle=True)
+        stim_onset = np_tmp['stim_onset']
+        s_arr = np.transpose(stim_onset, axes=(1,0))
+        
+    else:
+        
+        # Create empty s_array (number of triggers assumed to be 3)
+        s_arr = np.zeros((number_of_captures, 3))
     
     # Aux data
     aux = np.array([], dtype=float)
