@@ -34,6 +34,9 @@ class Reader(QtCore.QObject):
     # Capture counter
     capture_counter = 0
     
+    # Counts captures in current collection
+    captures_in_current_collection = 0
+    
     # Fake counter for data send
     fake_data_counter = 0
     
@@ -41,6 +44,10 @@ class Reader(QtCore.QObject):
     logging = False # Determines if capture is to be logged
     start_logging_signal_caught = False # Catch for pyqt signal
     stop_logging_signal_caught = False # Catch for pyqt signal
+    
+    # Timestamp
+    start_time = 0
+    trigger_time = 0
     
     
     #################################################
@@ -75,6 +82,8 @@ class Reader(QtCore.QObject):
     ################################################# 
     def increment_capture_counter(self):
         self.capture_counter += 1 
+        if self.logging:
+            self.captures_in_current_collection += 1
 
 
     ################################################# 
@@ -115,8 +124,7 @@ class Reader(QtCore.QObject):
                 self.write_log_file()
                 
             # Increment capture counter
-            if self.logging:
-                self.increment_capture_counter()
+            self.increment_capture_counter()
             
         else:
             
@@ -131,6 +139,40 @@ class Reader(QtCore.QObject):
         # Clear any existing trigger, begin the stream
         print("Capturing histograms")
         self.dut.FrameController.begin_blitz()
+    
+    
+    #################################################
+    # Wait for refclk started signal from FPGA
+    #################################################   
+    def wait_for_refclk_started(self):
+        
+        # Check for trigger in indicating that refclk has started
+        pass
+    
+    
+    #################################################
+    # Wait for refclk started signal from FPGA
+    #################################################   
+    def send_start_trigger(self):
+        
+        # Report
+        print("Sending trigger")
+        
+        # Send trigger signal to FPGA
+        if not self.debug:
+            self.dut.ttl_trigger()
+            
+        # Log the time
+        self.trigger_time = perf_counter() - self.start_time
+        
+        # Write out trigger time file
+        if self.logging:
+            s = "Onset" + "\t" + "Duration" + "\t" + "Amplitude" + "\t" + "trial_type" + "\n"
+            s += str(self.trigger_time) + "\t" + "1" + "\t" + "1" + "\t" + "1" + "\n"
+            join(self.experiment_directory, "capture_" + str(self.capture_counter))
+            f = open(join(self.experiment_directory, "events.tsv"), "w")
+            f.write(s)
+            f.close()
         
 
     #################################################
@@ -162,15 +204,14 @@ class Reader(QtCore.QObject):
                 self.write_log_file()
                 
             # Increment capture counter
-            if self.logging:
-                self.increment_capture_counter()
+            self.increment_capture_counter()
 
 
     #################################################
     # Function to determine if Reader thread should be stopped
     #################################################    
     def should_stop_logging(self):
-        if self.capture_counter == self.number_of_captures:
+        if self.captures_in_current_collection == self.number_of_captures:
             print("Reader stopped internally")
             self.stop_logging()
         else:
@@ -191,6 +232,10 @@ class Reader(QtCore.QObject):
             
             # Reset catch 
             self.start_logging_signal_caught = False
+            
+            # Send trigger
+            self.send_start_trigger()
+            
         
         # Stop logging if this signal is caught
         elif self.stop_logging_signal_caught:
@@ -204,6 +249,9 @@ class Reader(QtCore.QObject):
             
             # Reset catch 
             self.stop_logging_signal_caught = False
+            
+            # Reset captures_in_current_collection
+            self.captures_in_current_collection = 0
                 
                 
     #################################################
@@ -245,6 +293,10 @@ class Reader(QtCore.QObject):
         # Begin blitz
         if not self.debug:
             self.begin_blitz()
+            self.wait_for_refclk_started()
+        
+        # Track time
+        self.start_time = perf_counter()
         
         # Create timer 
         self.reader_timer=QtCore.QTimer()
@@ -265,6 +317,7 @@ class Reader(QtCore.QObject):
         
         print("Reader received start logging signal")
         
+        # Indicate that logging signal was caught
         self.start_logging_signal_caught = True
         
         
@@ -301,9 +354,6 @@ class Reader(QtCore.QObject):
         
         # Set flag
         self.stop_logging_signal_caught = True
-        
-        # Reset capture counter to 0
-        self.capture_counter = 0
             
         
     #################################################
