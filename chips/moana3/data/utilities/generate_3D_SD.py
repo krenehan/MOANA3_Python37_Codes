@@ -11,19 +11,22 @@ from scipy.io import savemat, loadmat
 import numpy as np
 
 # SD file path
-sd_2D = r'C:\Users\Dell-User\Dropbox\MOANA\Homer3\new_moana3_probe\MOANA3_RIGID_4BY4.SD'
+sd_2D = r'C:\Users\Dell-User\Dropbox\MOANA\Homer3\new_moana3_probe\MOANA3_RIGIDFLEX_4BY4_SOMATOSENSORY.SD'
 
 # SD file path to output
-sd_3D = r'C:\Users\Dell-User\Dropbox\MOANA\Homer3\new_moana3_probe\MOANA3_RIGIDFLEX_4BY4_3D.SD'
+sd_3D = r'C:\Users\Dell-User\Dropbox\MOANA\Homer3\new_moana3_probe\MOANA3_RIGIDFLEX_4BY4_SOMATOSENSORY_3D.SD'
 
 # Text file path
-txt_3D = r'C:\Users\Dell-User\Dropbox\MOANA\Homer3\new_moana3_probe\MOANA3_RIGIDFLEX_4BY4_3D.txt'
+txt_3D = r'C:\Users\Dell-User\Downloads\dummy\probe_reg.txt'
 
 # SD indexing (the ones that I know)
 WAVELENGTH = 0
 SRC_POSITION = 1
 DET_POSITION = 2
 DUMMY_POSITION = 3
+SRC_POS_3D = 4
+DET_POS_3D = 5
+DUMMY_POS_3D = 6
 NUM_SRC = 13
 NUM_DET = 14
 MEAS_LIST = 18
@@ -39,8 +42,8 @@ if 'SD' in mdict:
     sd = mdict['SD']
     
 # Get number of sources and detectors
-numSrc = int(sd[0][0][SRC_POSITION])
-numDet = int(sd[0][0][DET_POSITION])
+numSrc = int(sd[0][0][NUM_SRC])
+numDet = int(sd[0][0][NUM_DET])
 numDum = len(sd[0][0][DUMMY_POSITION])
 
 # Create arrays
@@ -86,9 +89,9 @@ for l in ll:
         dummy_positions[idx] = coords
     
 # Replace
-sd[0][0][SRC_POSITION] = source_positions
-sd[0][0][DET_POSITION] = detector_positions
-sd[0][0][DUMMY_POSITION] = dummy_positions
+sd[0][0][SRC_POS_3D] = source_positions
+sd[0][0][DET_POS_3D] = detector_positions
+sd[0][0][DUMMY_POS_3D] = dummy_positions
 
 # Check that all arrays are float arrays (due to bug in Homer3 HDF5 Save function)
 for idx in range(len(sd[0][0])):
