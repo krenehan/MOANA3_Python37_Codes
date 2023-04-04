@@ -19,6 +19,9 @@ from gui.YieldStruct import YieldStruct
 from DataPacket import DataPacket
 from DynamicPacket import DynamicPacket
 
+# LSL inputs
+from pylsl import StreamInlet, resolve_stream
+
 # Generic  imports
 import numpy as np
 import os
@@ -1025,6 +1028,9 @@ class PlotWindow(QtWidgets.QMainWindow):
         # Connect reload_parameters signal
         self.reader_reload_parameters_signal.connect(self.reader.reload_parameters)
         
+        # Connect logging_finished signal to reader_stopped_data_collection slot
+        self.reader.logging_finished.connect(self.reader_stopped_data_collection)
+        
         # Connect internal_finished signal to reader_called_stop slot
         self.reader.finished.connect(self.reader_called_stop)
         
@@ -1087,6 +1093,25 @@ class PlotWindow(QtWidgets.QMainWindow):
         # Update
         self.reader_sent_new_data = True
         
+    
+    #################################################
+    # Handler for when data collection is stopped by the reader
+    #################################################
+    @QtCore.pyqtSlot(int)
+    def reader_stopped_data_collection(self, status_int):
+        
+        # Update status message
+        self.update_status_message("Data collection stopped by reader")
+        
+        # Update status bit
+        self.logging_running = False
+            
+        # Update button
+        self.update_start_stop_collection_button()
+            
+        # Update capture number
+        self.capture_number = 0
+        
         
     #################################################
     # Reader calls stop internally, which triggers this function
@@ -1112,7 +1137,7 @@ class PlotWindow(QtWidgets.QMainWindow):
     # Function for situation where reader is destroyed
     #################################################
     @QtCore.pyqtSlot(QtCore.QObject)
-    def reader_destroyed(self, status_int):
+    def reader_destroyed(self, obj):
         
         # Stop imaging if the reader sends finished signal to this slot
         print("Reader sent destroyed signal")
