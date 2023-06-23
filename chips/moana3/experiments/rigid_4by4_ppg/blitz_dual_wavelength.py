@@ -58,8 +58,8 @@ meas_per_patt                       = 312500
 patt_per_frame                      = 32 
 number_of_frames                    = 25
 tx_refclk_freq                      = 12.5e6
-pad_captured_mask                   = 0b1111111111111111
-subtractor_offset                   = 20
+pad_captured_mask                   = 0b1111111101111111
+subtractor_offset                   = 0
 
 # Report integration time
 integration_time = round(meas_per_patt * 1/clk_freq * patt_per_frame * number_of_frames * 1000, 1)
@@ -159,7 +159,7 @@ for time_gate_value in time_gate_list:
     period                              = round(1/clk_freq*1e9, 1)
     number_of_bins                      = 150
     bin_size                            = 12
-    requested_delay                     = 0#period + time_gate_value 
+    requested_delay                     = period + time_gate_value - 2
     duty_cycle                          = 0.5 
     spad_voltage                        = 24.7
     vrst_voltage                        = 3.3
@@ -290,7 +290,10 @@ for time_gate_value in time_gate_list:
     # # Setup the delay line
     dut.DelayLine.specify_clock(period,duty_cycle) 
     clk_flip, coarse, fine, finest, actual_delay_ns = dut.DelayLine.get_setting(requested_delay)
-    
+
+    # Set up VCSEL biases 
+    dut.update_vcsel_data_bits(nir_vcsel_bias, ir_vcsel_bias)
+    dut.vcsel_enable_trigger()
     
     # =============================================================================
     # Begin scan and capture
@@ -318,6 +321,7 @@ for time_gate_value in time_gate_list:
         print("Powering on...")
         dut.enable_hvdd_ldo_supply()
         dut.enable_cath_sm_supply()
+        dut.enable_vcsel_cath_sm_supply()
         time.sleep(ldo_wait)
         
         # Issue scan reset
@@ -499,16 +503,16 @@ for time_gate_value in time_gate_list:
         
         # Initialize capture count
         c = 0
-        
+
         # Start blitz
         dut.FrameController.begin_blitz()
+        
         
         # Begin blitz
         while True:
             
             if dut.check_ram_trigger():
-                
-
+            
                 
                 # Read data
                 dut.read_master_fifo_data(packet)
@@ -542,7 +546,8 @@ for time_gate_value in time_gate_list:
         # scan_bits_received = [dut.chip_infrastructure.get_scan_chain(row[i]).get_scan_chain_segment(cell) for i in range(number_of_chips)]
         
         
-        # dut.disable_hvdd_ldo_supply()
+        dut.disable_hvdd_ldo_supply()
+        dut.disable_vcsel_cath_sm_supply()
         dut.disable_cath_sm_supply()
         # key.ChannelEnable(False)
         print("Closing FPGA")
