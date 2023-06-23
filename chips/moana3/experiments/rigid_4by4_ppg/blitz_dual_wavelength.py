@@ -159,7 +159,7 @@ for time_gate_value in time_gate_list:
     period                              = round(1/clk_freq*1e9, 1)
     number_of_bins                      = 150
     bin_size                            = 12
-    requested_delay                     = period + time_gate_value - 2
+    requested_delay                     = period + time_gate_value - 1
     duty_cycle                          = 0.5 
     spad_voltage                        = 24.7
     vrst_voltage                        = 3.3
@@ -292,8 +292,8 @@ for time_gate_value in time_gate_list:
     clk_flip, coarse, fine, finest, actual_delay_ns = dut.DelayLine.get_setting(requested_delay)
 
     # Set up VCSEL biases 
-    dut.update_vcsel_data_bits(nir_vcsel_bias, ir_vcsel_bias)
-    dut.vcsel_enable_trigger()
+    # dut.update_vcsel_data_bits(nir_vcsel_bias, ir_vcsel_bias)
+    # dut.vcsel_enable_trigger()
     
     # =============================================================================
     # Begin scan and capture
@@ -321,7 +321,7 @@ for time_gate_value in time_gate_list:
         print("Powering on...")
         dut.enable_hvdd_ldo_supply()
         dut.enable_cath_sm_supply()
-        dut.enable_vcsel_cath_sm_supply()
+        # dut.enable_vcsel_cath_sm_supply()
         time.sleep(ldo_wait)
         
         # Issue scan reset
@@ -547,7 +547,7 @@ for time_gate_value in time_gate_list:
         
         
         dut.disable_hvdd_ldo_supply()
-        dut.disable_vcsel_cath_sm_supply()
+        # dut.disable_vcsel_cath_sm_supply()
         dut.disable_cath_sm_supply()
         # key.ChannelEnable(False)
         print("Closing FPGA")
