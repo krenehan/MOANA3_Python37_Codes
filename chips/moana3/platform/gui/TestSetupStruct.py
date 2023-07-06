@@ -18,11 +18,14 @@ class TestSetupStruct():
     '''Data structure for storing test setup information'''
     
     # Constructor
-    def __init__(self, function_pointer=None):
+    def __init__(self, function_pointer=None ):
         
         # Logo path
         self.__logo_path = ''
         self.__logo_found = False
+        
+        # Status of delay line object
+        self.__delay_line_object_set = False
         
         # # Callback function for invalidating measurements per pattern
         # self.__reload_dynamic_packet = self.__empty
@@ -57,7 +60,7 @@ class TestSetupStruct():
         # Constant or derived settings
         default_subtractor_value = int(round((1/default_clock_frequency) * 0.5 / 65e-12, 0))
         default_subtractor_offset = 0
-        default_delay = default_period + default_time_gating_setting
+        default_delay = default_period - 1 + default_time_gating_setting
         
         # Conditions
         default_conditions = ""
@@ -269,7 +272,7 @@ class TestSetupStruct():
             new_time_gating_setting = float(new_time_gating_setting)
             if (new_time_gating_setting >= 0.0) and (new_time_gating_setting <= 15.0):
                 self.full_test_setup_dict['Time Gating Setting'] = new_time_gating_setting
-                self.full_test_setup_dict['Delay'] = self.full_test_setup_dict['Period'] +  self.full_test_setup_dict['Time Gating Setting'] - 1
+                self.full_test_setup_dict['Delay'] = self.full_test_setup_dict['Period'] - 1 +  self.full_test_setup_dict['Time Gating Setting'] 
             else:
                 print("Time gating setting not accepted")
         except (TypeError, ValueError):
@@ -346,10 +349,11 @@ class TestSetupStruct():
     def nir_vcsel_bias(self, new_nir_vcsel_bias):
         try:
             new_nir_vcsel_bias = float(new_nir_vcsel_bias)
-            if (abs(new_nir_vcsel_bias) <= 2.0):
+            new_nir_vcsel_bias = round(new_nir_vcsel_bias, ndigits=1)
+            if (abs(new_nir_vcsel_bias) <= 1.2):
                 self.full_test_setup_dict['NIR VCSEL Bias'] = new_nir_vcsel_bias
             else:
-                print("NIR VCSEL bias not accepted, should be less than 2V")
+                print("NIR VCSEL bias not accepted, should be less than 1.2V")
         except (ValueError, TypeError):
             print("NIR VCSEL bias not valid")
             
@@ -365,10 +369,11 @@ class TestSetupStruct():
     def ir_vcsel_bias(self, new_ir_vcsel_bias):
         try:
             new_ir_vcsel_bias = float(new_ir_vcsel_bias)
-            if (abs(new_ir_vcsel_bias) <= 2.0):
+            new_ir_vcsel_bias = round(new_ir_vcsel_bias, ndigits=1)
+            if (abs(new_ir_vcsel_bias) <= 1.2):
                 self.full_test_setup_dict['IR VCSEL Bias'] = new_ir_vcsel_bias
             else:
-                print("IR VCSEL bias not accepted, should be less than 2V")
+                print("IR VCSEL bias not accepted, should be less than 1.2V")
         except (ValueError, TypeError):
             print("IR VCSEL bias not valid")
             
@@ -583,7 +588,44 @@ class TestSetupStruct():
     @capture_time.setter
     def capture_time(self, new_capture_time):
         print("Cannot set capture time")
+        
+        
+
+    ################################
+    # Refresh delay after delay line has been initialized
+    ################################
+    def refresh_actual_delay(self, delay_line_object):
+        
+        # Store delay line object
+        self.dut_delay_line = delay_line_object
+        
+        # Keep track of status
+        self.__delay_line_object_set = True
+        
+        # Find delay of delay line given coarse, fine, finest, clock flip bits in the dynamic packet file
+        delay = self.dut_delay_line.get_setting(self.delay)
+        
+        # Set the delay
+        self.full_test_setup_dict['Delay'] = delay
+        
+        
+    ################################
+    # Refresh delay from dynamic packet file input
+    ################################
+    def update_time_gating_setting(self, clk_flip, coarse, fine, finest):
+        
+        if not self.__delay_line_object_set:
+            print("Time gating setting not updated because delay line was not set")
+        else:
+            # Find delay of delay line given coarse, fine, finest, clock flip bits in the dynamic packet file
+            delay = self.dut_delay_line.get_delay(clk_flip, coarse, fine, finest)
             
+            # Find new values for delay and time gating setting
+            time_gating_setting = delay - self.delay
+            
+            # Update the time gating setting accordingly
+            self.time_gating_setting = time_gating_setting
+        
             
     ################################
     # Interpret a test setup file

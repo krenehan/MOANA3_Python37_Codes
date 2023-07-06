@@ -507,7 +507,66 @@ class DynamicPacket:
         
         # Find indices where we get true
         return tuple(arr.nonzero()[0])
-
+    
+    
+    # ====================================================
+    # Function to check the delay line settings (coarse, fine, finest, clk_flip)
+    # ====================================================
+    def get_delay_line_settings(self):
+        
+        # Assume that all coarse, fine, finest, and clk_flip settings are the same across patterns
+        return self.__dynamic_frame_structure[0][0]['clk_flip'], \
+               self.__dynamic_frame_structure[0][0]['aqc_dll_coarse_word'], \
+               self.__dynamic_frame_structure[0][0]['aqc_dll_fine_word'], \
+               self.__dynamic_frame_structure[0][0]['aqc_dll_finest_word']
+               
+               
+    # ====================================================
+    # Function to check the VCSEL driver settings
+    # ====================================================
+    def get_nir_vcsel_driver_setting(self):
+        
+        # Assume that all NIR patterns have the same VCSEL driver setting
+        for pattern in range(self.__patterns_per_frame):
+            
+            # Check if this is a NIR pattern
+            if self.wavelength_for_pattern(pattern) == self.__nir_index:
+                
+                # Loop through chips to find the emitter
+                for chip in range(self.__number_of_chips):
+                    
+                    # Check if this is an emitter
+                    if self.is_emitter(pattern, chip):
+                        
+                        # Return VCSEL driver setting
+                        return self.__dynamic_frame_structure[pattern][chip]['driver_dll_word']
+                    
+        print("No NIR patterns found")
+        return 0
+    
+    # ====================================================
+    # Function to check the VCSEL driver settings
+    # ====================================================
+    def get_ir_vcsel_driver_setting(self):
+        
+        # Assume that all NIR patterns have the same VCSEL driver setting
+        for pattern in range(self.__patterns_per_frame):
+            
+            # Check if this is a NIR pattern
+            if self.wavelength_for_pattern(pattern) == self.__ir_index:
+                
+                # Loop through chips to find the emitter
+                for chip in range(self.__number_of_chips):
+                    
+                    # Check if this is an emitter
+                    if self.is_emitter(pattern, chip):
+                        
+                        # Return VCSEL driver setting
+                        return self.__dynamic_frame_structure[pattern][chip]['driver_dll_word']
+                    
+        print("No IR patterns found")
+        return 0
+    
         
     # ====================================================
     # Function to create pipe in bytearray from dynamic frame structure
@@ -585,7 +644,7 @@ if __name__ == "__main__":
     b = a.create_pipe_in()
     
     # Read file
-    a.read("C:\\Users\\Dell-User\\Dropbox\\MOANA\\Python\\MOANA3_Python37_Codes\\chips\\moana3\\data\\rigid_4by4_hbo2_testing\\data\\nirsetting4_0p8Virsetting3_1p0V_Trial3\\dynamic_packet.txt")
+    a.read("C:\\Users\\Dell-User\\Dropbox\\MOANA\\Python\\MOANA3_Python37_Codes\\chips\\moana3\\data\\2023-05-05_Petros_Visual_Block_MOANA\\data\\nirsetting4_0p8Virsetting3_1p0V_2023-05-05_12-46-56\\dynamic_packet.txt")
 
     
     

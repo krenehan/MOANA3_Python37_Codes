@@ -707,8 +707,12 @@ class Ui_TestSetupDialog(object):
             # Pass to dynamic packet
             self.__dynamic_packet.read(dlg.selectedFiles()[0])
             
-            # Update measurements per pattern
+            # Update patterns per frame
             self.__test_setup_struct.patterns_per_frame = self.__dynamic_packet.patterns_per_frame
+            
+            # Update delay settings
+            clk_flip, coarse, fine, finest = self.__dynamic_packet.get_delay_line_settings()
+            self.__test_setup_struct.update_time_gating_setting(clk_flip, coarse, fine, finest)
             
             # Update test setup
             self.__show_test_setup_values()

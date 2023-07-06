@@ -18,6 +18,7 @@ from gui.CustomQtObjects import PlainTextEdit
 from gui.YieldStruct import YieldStruct
 from DataPacket import DataPacket
 from DynamicPacket import DynamicPacket
+from chip.DelayLine import DelayLine
 
 # LSL inputs
 from pylsl import StreamInlet, resolve_stream
@@ -633,9 +634,14 @@ class PlotWindow(QtWidgets.QMainWindow):
             # Configure hardware
             if not self.debug:
                 
+                # Reconfigure the DUT
                 self.reconfigure_dut()
                 
+                # Power on
                 self.power_up()
+                
+                # Update VCSEL bias 
+                self.update_vcsel_data_bits()
                 
                 # Rescan
                 self.scan()
@@ -738,6 +744,7 @@ class PlotWindow(QtWidgets.QMainWindow):
         if self.target_pattern >= self.test_setup_struct.patterns_per_frame:
             self.ui.patternPlottedTextEdit.setPlainText(str(self.test_setup_struct.patterns_per_frame-1))
             self.changePatternPlotted()
+        
         
         
     #################################################
@@ -1303,6 +1310,7 @@ class PlotWindow(QtWidgets.QMainWindow):
                 print("Disabling power supplies")
                 self.dut.disable_cath_sm_supply()
                 self.dut.disable_hvdd_ldo_supply()
+                self.dut.disable_vcsel_cath_sm_supply()
             
                 print("Closing FPGA")
                 self.dut.fpga_interface.xem.Close()
@@ -1346,6 +1354,7 @@ class PlotWindow(QtWidgets.QMainWindow):
         # Enable supplies
         self.dut.enable_hvdd_ldo_supply()
         self.dut.enable_cath_sm_supply()
+        self.dut.enable_vcsel_cath_sm_supply()
         sleep(0.1)
         self.update_status_message("Power on done!")
         
@@ -1489,6 +1498,9 @@ class PlotWindow(QtWidgets.QMainWindow):
                                             self.test_setup_struct.measurements_per_pattern,
                                             self.test_setup_struct.pad_captured_mask )
             
+        # Pass to test setup structure
+        self.test_setup_struct.refresh_actual_delay(self.dut.DelayLine)
+            
         # Print
         self.update_status_message("Frame controller configuration done!")
         
@@ -1506,6 +1518,16 @@ class PlotWindow(QtWidgets.QMainWindow):
 
         # Print
         self.update_status_message("Dynamic mode activated!")
+        
+        
+    #################################################
+    # Configure frame controller based on test settings
+    ################################################# 
+    def update_vcsel_data_bits(self):
+        
+        # Set up VCSEL biases
+        self.dut.update_vcsel_data_bits(self.test_setup_struct.nir_vcsel_bias, self.test_setup_struct.ir_vcsel_bias)
+        self.dut.vcsel_enable_trigger()
         
         
 
