@@ -15,7 +15,7 @@ class PlainTextEdit(QtWidgets.QPlainTextEdit):
         
 class BinaryTextEdit(QtWidgets.QPlainTextEdit):
     def keyPressEvent(self, event):
-        if event.key() in (QtCore.Qt.Key_0, QtCore.Qt.Key_1):
+        if event.key() in (QtCore.Qt.Key_0, QtCore.Qt.Key_1, QtCore.Qt.Key_Backspace):
             super().keyPressEvent(event)
         else:
             return
