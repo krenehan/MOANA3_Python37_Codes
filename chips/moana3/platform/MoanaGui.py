@@ -18,7 +18,6 @@ from gui.CustomQtObjects import PlainTextEdit
 from gui.YieldStruct import YieldStruct
 from DataPacket import DataPacket
 from DynamicPacket import DynamicPacket
-from chip.DelayLine import DelayLine
 
 # LSL inputs
 from pylsl import StreamInlet, resolve_stream
@@ -346,6 +345,12 @@ class PlotWindow(QtWidgets.QMainWindow):
         
         # Create the test setup handle
         self.test_setup_struct                = TestSetupStruct()
+        
+        # Specify clock for delay line
+        self.dut.DelayLine.specify_clock(self.test_setup_struct.period, 0.5)  
+          
+        # Pass to test setup structure
+        self.test_setup_struct.refresh_actual_delay(self.dut.DelayLine)
         
         # Create the dynamic packet
         self.dynamic_packet                   = DynamicPacket(self.test_setup_struct.number_of_chips, self.test_setup_struct.patterns_per_frame)
@@ -1487,9 +1492,6 @@ class PlotWindow(QtWidgets.QMainWindow):
         # Print
         self.update_status_message("Configuring frame controller...")
         
-        # Specify clock for delay line
-        self.dut.DelayLine.specify_clock(self.test_setup_struct.period, 0.5)
-        
         # Find requested delay
         self.clk_flip, self.coarse, self.fine, self.finest, self.actual_delay = self.dut.DelayLine.get_setting(self.test_setup_struct.delay)
         self.dut.FrameController.send_frame_data( self.test_setup_struct.number_of_chips, \
@@ -1497,9 +1499,6 @@ class PlotWindow(QtWidgets.QMainWindow):
                                             self.test_setup_struct.patterns_per_frame,     \
                                             self.test_setup_struct.measurements_per_pattern,
                                             self.test_setup_struct.pad_captured_mask )
-            
-        # Pass to test setup structure
-        self.test_setup_struct.refresh_actual_delay(self.dut.DelayLine)
             
         # Print
         self.update_status_message("Frame controller configuration done!")

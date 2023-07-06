@@ -712,6 +712,14 @@ class Ui_TestSetupDialog(object):
             
             # Update delay settings
             clk_flip, coarse, fine, finest = self.__dynamic_packet.get_delay_line_settings()
+            
+            # Convert from string to int
+            clk_flip = int(clk_flip, base=2)
+            coarse = int(coarse, base=2)
+            fine = int(fine, base=2)
+            finest = int(finest, base=2)
+            
+            # Update time gating setting
             self.__test_setup_struct.update_time_gating_setting(clk_flip, coarse, fine, finest)
             
             # Update test setup

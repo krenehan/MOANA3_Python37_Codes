@@ -272,7 +272,7 @@ class TestSetupStruct():
             new_time_gating_setting = float(new_time_gating_setting)
             if (new_time_gating_setting >= 0.0) and (new_time_gating_setting <= 15.0):
                 self.full_test_setup_dict['Time Gating Setting'] = new_time_gating_setting
-                self.full_test_setup_dict['Delay'] = self.full_test_setup_dict['Period'] - 1 +  self.full_test_setup_dict['Time Gating Setting'] 
+                self.full_test_setup_dict['Delay'] = self.delay +  self.full_test_setup_dict['Time Gating Setting'] 
             else:
                 print("Time gating setting not accepted")
         except (TypeError, ValueError):
@@ -603,10 +603,13 @@ class TestSetupStruct():
         self.__delay_line_object_set = True
         
         # Find delay of delay line given coarse, fine, finest, clock flip bits in the dynamic packet file
-        delay = self.dut_delay_line.get_setting(self.delay)
+        delay = self.dut_delay_line.get_setting(self.delay)[4]
+        print("This is the delay")
+        print(delay)
         
         # Set the delay
         self.full_test_setup_dict['Delay'] = delay
+        print(self.delay)
         
         
     ################################
@@ -622,6 +625,7 @@ class TestSetupStruct():
             
             # Find new values for delay and time gating setting
             time_gating_setting = delay - self.delay
+            print("{}, {}, {}".format(self.delay, delay, time_gating_setting))
             
             # Update the time gating setting accordingly
             self.time_gating_setting = time_gating_setting

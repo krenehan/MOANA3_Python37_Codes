@@ -2363,5 +2363,7 @@ if __name__ == "__main__":
     
     # Find requested delay
     clk_flip, coarse, fine, finest, actual_delay = d.get_setting(20)
+    
+    
         
     
