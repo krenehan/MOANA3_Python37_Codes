@@ -464,9 +464,36 @@ class DynamicPacket:
                     
                     # Update field
                     self.__dynamic_frame_structure[p][c][f] = field_dict[f]
+                    
+        # Update emitter pattern
+        self.__update_emitter_pattern()
         
         # Success
         return 0
+    
+    
+    # ====================================================
+    # Function to update emitter pattern
+    # ====================================================
+    def __update_emitter_pattern(self):
+        
+        # Go through each pattern
+        for p in range(self.patterns_per_frame):
+            
+            # Go through each chip
+            for c in range(self.number_of_chips):
+                
+                # Check fields emitter
+                vcsel_enable = bool(int(self.__dynamic_frame_structure[p][c]['vcsel_enable']))
+                nir_vcsel_enable = bool(int(self.__dynamic_frame_structure[p][c]['nir_vcsel_enable']))
+                ir_vcsel_enable = bool(int(self.__dynamic_frame_structure[p][c]['ir_vcsel_enable']))
+                
+                # Update emitter packet
+                if vcsel_enable and nir_vcsel_enable:
+                    self.emitter_pattern[p][c][self.nir_index] = True
+                if vcsel_enable and ir_vcsel_enable:
+                    self.emitter_pattern[p][c][self.ir_index] = True
+                
 
 
     # ====================================================
