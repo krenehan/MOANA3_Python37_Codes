@@ -608,6 +608,9 @@ class TestSetupStruct():
         # Find delay of delay line given coarse, fine, finest, clock flip bits in the dynamic packet file
         delay = self.dut_delay_line.get_setting(self.delay)[4]
         
+        # Update default delay
+        self.__default_delay = delay
+        
         # Set the delay
         self.full_test_setup_dict['Delay'] = delay
         

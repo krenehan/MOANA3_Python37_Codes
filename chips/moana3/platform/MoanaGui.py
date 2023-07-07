@@ -342,7 +342,7 @@ class PlotWindow(QtWidgets.QMainWindow):
         self.dut                              = None if self.debug else test_platform.TestPlatform("moana3")
         
         # For debug
-        self.delay_line                       = self.dut.delay_line if not self.debug else DelayLine()
+        self.delay_line                       = self.dut.DelayLine if not self.debug else DelayLine()
         
         # Store the bitfile path
         self.bitfile_path                     = bitfile_path
@@ -1406,6 +1406,9 @@ class PlotWindow(QtWidgets.QMainWindow):
         self.dut.init_fpga(self.bitfile_path, refclk_freq=self.test_setup_struct.clock_frequency)
         self.dut.fpga_interface.xem.ResetFPGA()
         
+        # Refresh delay line handle
+        self.delay_line                       = self.dut.DelayLine if not self.debug else DelayLine()
+        
         # Print
         self.update_status_message("FPGA configuration done!")
         
@@ -1496,8 +1499,11 @@ class PlotWindow(QtWidgets.QMainWindow):
         # Print
         self.update_status_message("Configuring frame controller...")
         
+        # Specify clock
+        self.delay_line.specify_clock(self.test_setup_struct.period, 0.5) 
+        
         # Find requested delay
-        self.clk_flip, self.coarse, self.fine, self.finest, self.actual_delay = self.dut.DelayLine.get_setting(self.test_setup_struct.delay)
+        self.clk_flip, self.coarse, self.fine, self.finest, self.actual_delay = self.delay_line.get_setting(self.test_setup_struct.delay)
         self.dut.FrameController.send_frame_data( self.test_setup_struct.number_of_chips, \
                                             self.test_setup_struct.number_of_frames,   \
                                             self.test_setup_struct.patterns_per_frame,     \
