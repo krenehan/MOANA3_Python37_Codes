@@ -62,6 +62,9 @@ class TestSetupStruct():
         default_subtractor_offset = 0
         default_delay = default_period - 1 + default_time_gating_setting
         
+        # Keep track of default delay
+        self.__default_delay = default_delay
+        
         # Conditions
         default_conditions = ""
         
@@ -269,10 +272,10 @@ class TestSetupStruct():
     @time_gating_setting.setter
     def time_gating_setting(self, new_time_gating_setting):
         try:
-            new_time_gating_setting = float(new_time_gating_setting)
+            new_time_gating_setting = round(float(new_time_gating_setting), 3)
             if (new_time_gating_setting >= 0.0) and (new_time_gating_setting <= 15.0):
                 self.full_test_setup_dict['Time Gating Setting'] = new_time_gating_setting
-                self.full_test_setup_dict['Delay'] = self.delay +  self.full_test_setup_dict['Time Gating Setting'] 
+                self.full_test_setup_dict['Delay'] = round(self.__default_delay + self.time_gating_setting, 3)
             else:
                 print("Time gating setting not accepted")
         except (TypeError, ValueError):
@@ -604,18 +607,15 @@ class TestSetupStruct():
         
         # Find delay of delay line given coarse, fine, finest, clock flip bits in the dynamic packet file
         delay = self.dut_delay_line.get_setting(self.delay)[4]
-        print("This is the delay")
-        print(delay)
         
         # Set the delay
         self.full_test_setup_dict['Delay'] = delay
-        print(self.delay)
         
         
     ################################
     # Refresh delay from dynamic packet file input
     ################################
-    def update_time_gating_setting(self, clk_flip, coarse, fine, finest):
+    def update_time_gating_setting_from_dynamic_packet(self, clk_flip, coarse, fine, finest):
         
         if not self.__delay_line_object_set:
             print("Time gating setting not updated because delay line was not set")
@@ -624,7 +624,7 @@ class TestSetupStruct():
             delay = self.dut_delay_line.get_delay(clk_flip, coarse, fine, finest)
             
             # Find new values for delay and time gating setting
-            time_gating_setting = delay - self.delay
+            time_gating_setting = delay - self.__default_delay
             print("{}, {}, {}".format(self.delay, delay, time_gating_setting))
             
             # Update the time gating setting accordingly

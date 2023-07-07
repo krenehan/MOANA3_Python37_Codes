@@ -617,7 +617,6 @@ class Ui_TestSetupDialog(object):
         self.__test_setup_struct.logging = self.loggingEnabledCheckBox.isChecked()
         self.__test_setup_struct.number_of_captures = self.capturesTextEdit.toPlainText()
         self.__test_setup_struct.clock_frequency = float(self.clkFreqTextEdit.toPlainText()) * 1e6
-        self.__test_setup_struct.time_gating_setting = self.timeGateTextEdit.toPlainText()
         self.__test_setup_struct.measurements_per_pattern = self.measPerPattTextEdit.toPlainText()
         # self.__test_setup_struct.patterns_per_frame = self.pattPerFrameTextEdit.toPlainText()
         self.__test_setup_struct.number_of_frames = self.numberOfFramesTextEdit.toPlainText()
@@ -631,6 +630,11 @@ class Ui_TestSetupDialog(object):
         self.__test_setup_struct.subtractor_offset = self.subtractorOffsetTextEdit.toPlainText()
         self.__test_setup_struct.conditions = self.conditionsTextEdit.toPlainText()
         self.__test_setup_struct.pad_captured_mask = int(self.padCapturedMaskTextEdit.toPlainText(), base=2)
+        
+        # Push to test setup structure
+        # self.__test_setup_struct.time_gating_setting = self.timeGateTextEdit.toPlainText()
+        
+        # Refresh display with accepted values
         self.__show_test_setup_values()
         
         
@@ -720,7 +724,7 @@ class Ui_TestSetupDialog(object):
             finest = int(finest, base=2)
             
             # Update time gating setting
-            self.__test_setup_struct.update_time_gating_setting(clk_flip, coarse, fine, finest)
+            self.__test_setup_struct.update_time_gating_setting_from_dynamic_packet(clk_flip, coarse, fine, finest)
             
             # Update test setup
             self.__show_test_setup_values()

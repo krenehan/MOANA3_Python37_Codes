@@ -18,6 +18,7 @@ from gui.CustomQtObjects import PlainTextEdit
 from gui.YieldStruct import YieldStruct
 from DataPacket import DataPacket
 from DynamicPacket import DynamicPacket
+from chip.DelayLine import DelayLine
 
 # LSL inputs
 from pylsl import StreamInlet, resolve_stream
@@ -340,6 +341,9 @@ class PlotWindow(QtWidgets.QMainWindow):
         # Store the dut handle so that read function can be called
         self.dut                              = None if self.debug else test_platform.TestPlatform("moana3")
         
+        # For debug
+        self.delay_line                       = self.dut.delay_line if not self.debug else DelayLine()
+        
         # Store the bitfile path
         self.bitfile_path                     = bitfile_path
         
@@ -347,10 +351,10 @@ class PlotWindow(QtWidgets.QMainWindow):
         self.test_setup_struct                = TestSetupStruct()
         
         # Specify clock for delay line
-        self.dut.DelayLine.specify_clock(self.test_setup_struct.period, 0.5)  
+        self.delay_line.specify_clock(self.test_setup_struct.period, 0.5)  
           
         # Pass to test setup structure
-        self.test_setup_struct.refresh_actual_delay(self.dut.DelayLine)
+        self.test_setup_struct.refresh_actual_delay(self.delay_line)
         
         # Create the dynamic packet
         self.dynamic_packet                   = DynamicPacket(self.test_setup_struct.number_of_chips, self.test_setup_struct.patterns_per_frame)
