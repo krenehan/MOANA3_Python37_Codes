@@ -26,7 +26,7 @@ os.chdir(this_dir)
 number_of_chips = 16
 
 # Number of patterns in a frame
-patterns_per_frame = 32
+patterns_per_frame = 2
 
 # Clock specifications
 clock_period_ns = 20.0
@@ -34,10 +34,6 @@ duty_cycle = 0.5
 
 # Base delay for configuring chip delay lines
 common_delay = 19.0
-
-# NIR VCSEL setting
-nir_vcsel_setting = 4
-ir_vcsel_setting = 3
 
 
 #%% Initialize classes - Don't touch
@@ -78,7 +74,7 @@ sweep_emitter = True
 number_of_wavelengths = 2
 
 # Which sources will be included in the sweep? (do this in order!) (np.nan can be placed in locations where you don't want any chip to turn on)
-sources_to_sweep = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+sources_to_sweep = [0]
 sources_to_sweep = np.array(sources_to_sweep)
 
 # Which wavelength is swept first? (if using single wavelength, this is the only one in the sweep)
@@ -144,7 +140,7 @@ dynamic_packet.show(pattern_list=[0, patterns_per_frame-1])
 #%% Configure time gating options - These can be adjusted by user
 
 # Time gating support
-time_gating_enabled = True
+time_gating_enabled = False
 
 # Time gate each wavelength differently?
 time_gate_per_wavelength = False
