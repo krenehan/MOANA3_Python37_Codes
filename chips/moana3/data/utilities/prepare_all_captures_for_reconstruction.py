@@ -19,6 +19,11 @@ from interpret_test_setup import interpret_test_setup
 from interpret_emitter_pattern import interpret_emitter_pattern
 from interpret_yield import interpret_yield
 
+this_dir = os.getcwd()
+os.chdir("..\\..\\platform")
+import DynamicPacket
+os.chdir(this_dir)
+
 
 def prepare_all_captures_for_reconstruction():
     
@@ -57,11 +62,18 @@ def prepare_all_captures_for_reconstruction():
 
         
     # Look for emitter pattern file
-    if 'emitter_pattern.npy' not in filelist:
-        print(header + "Could not find emitter pattern file")
+    if ('emitter_pattern.npy' not in filelist) and ('dynamic_packet.txt' not in filelist):
+        print(header + "Could not find emitter pattern or dynamic packet file")
         found = False
     else:
-        print(header + "Found emitter pattern file")
+        if 'dynamic_packet.txt' in filelist:
+            print(header + "Found dynamic packet file")
+            legacy = False
+            
+        elif 'emitter_pattern.npy' in filelist:
+            print(header + "Found emitter pattern file")
+            legacy = True
+        
         
     # Look for test setup file
     if 'test_setup.txt' not in filelist:
@@ -89,8 +101,11 @@ def prepare_all_captures_for_reconstruction():
         arr = np.load('captures.npz')['data']
         
         # Load emitter pattern file
-        print(header + "Loading emitter pattern file")
-        ep = interpret_emitter_pattern()
+        if legacy:
+            print(header + "Loading emitter pattern file")
+            ep = interpret_emitter_pattern()
+        else:
+            print(header + "Loading emitter pattern file")
         
         # Interpret test setup
         print(header + "Loading test setup file")
@@ -98,7 +113,14 @@ def prepare_all_captures_for_reconstruction():
         
         # Used detectors
         print(header + "Loading yield file")
-        working_sources, working_detectors =  interpret_yield()
+        if legacy:
+            working_nir_sources, working_detectors =  interpret_yield()
+            working_ir_sources = working_nir_sources
+        else:
+            working_nir_sources, working_ir_sources, working_detectors =  interpret_yield()
+            
+        # Number of wavelengths
+        number_of_wavelengths = 2
         
         # Get shape
         number_of_captures, number_of_chips, number_of_frames, patterns_per_frame, number_of_bins = np.shape(arr)
@@ -111,6 +133,11 @@ def prepare_all_captures_for_reconstruction():
         # Modify number of captures and frames
         number_of_captures = number_of_captures * number_of_frames
         number_of_frames = 1
+        
+        # Dynamic packets
+        if not legacy:
+            dp = DynamicPacket.DynamicPacket(number_of_chips, patterns_per_frame)
+            dp.read("dynamic_packet.txt")
         
         # If we have a custom capture window, we redefine the number of captures to be included
         if capture_window_specified:
@@ -140,37 +167,85 @@ def prepare_all_captures_for_reconstruction():
         arr = np.transpose(arr, axes=(1, 2, 3, 0, 4))
 
         # Create final array
-        final = np.zeros((number_of_chips, number_of_chips, number_of_captures, number_of_bins), dtype=float)
+        final = np.zeros((number_of_chips, number_of_wavelengths, number_of_chips, number_of_captures, number_of_bins), dtype=int)
         
-        # Fill final array
-        print(header + "Filling output array")
-        for s in range(number_of_chips):
+        # Legacy style with only a single wavelength and emitter pattern file finds the source in the emitter pattern structure
+        if legacy:
             
-            # Check to see if the source is functional
-            if not (s in working_sources):
-                print(header + "Skipping source " + str(s) + " because it is non-functional")
-                continue
+            # Fill final array
+            print(header + "Filling output array")
+            for s in range(number_of_chips):
+                
+                # Check to see if the source is functional
+                if not (s in working_nir_sources):
+                    print(header + "Skipping source " + str(s) + " because it is non-functional")
+                    continue
+                
+                # Find the source index
+                p = np.where(ep==s)[0]
+                
+                # Check that we got something
+                if len(p) == 0:
+                    continue
+                if len(p) > 1:
+                    raise Exception("Found " + str(len(p)) + " source entries for emitter " + str(s) + " in emitter pattern")
+                
+                # Extract the index
+                pattern_index = p[0]
+                
+                # Fill
+                for chip in range(number_of_chips):
+                    if chip in working_detectors:
+                        final[s][0][chip] = arr[chip][0][pattern_index]
+                    else:
+                        print(header + "Skipping detector " + str(chip) + " because it is non-functional")
+                print(header + "Filled index " + str(s) + " of final array with data from pattern " + str(pattern_index))
+                
+        else:
             
-            # Find the source index
-            p = np.where(ep==s)[0]
+            # Fill final array
+            print(header + "Filling output array")
             
-            # Check that we got something
-            if len(p) == 0:
-                continue
-            if len(p) > 1:
-                raise Exception("Found " + str(len(p)) + " source entries for emitter " + str(s) + " in emitter pattern")
-            
-            # Extract the index
-            pattern_index = p[0]
-            
-            # Fill
-            for chip in range(number_of_chips):
-                if chip in working_detectors:
-                    final[s][chip] = arr[chip][0][pattern_index]
+            # Go through each pattern
+            for p in range(patterns_per_frame):
+                
+                # Get the source for this pattern
+                eip = dp.emitters_for_pattern(p)
+                if len(eip) < 1:
+                    raise Exception(header + "emitter not found for pattern " + str(p))
+                elif len(eip) > 1:
+                    raise Exception(header + "multiple emitters found for pattern " + str(p) + ": " + str(eip))
                 else:
-                    print(header + "Skipping detector " + str(chip) + " because it is non-functional")
-            print(header + "Filled index " + str(s) + " of final array with data from pattern " + str(pattern_index))
-
+                    s = eip[0]
+                    
+                # Get the wavelength for this pattern
+                wip = dp.wavelength_for_pattern(p)
+                if len(np.shape(wip)) == 0:
+                    w = wip
+                else:
+                    raise Exception(header + "wavelength not found for pattern " + str(p))
+                
+                # Check to see if the source is functional
+                if w == 0:
+                    if not (s in working_nir_sources):
+                        print(header + "Skipping NIR source " + str(s) + " because it is non-functional")
+                        continue
+                elif w == 1:
+                    if not (s in working_ir_sources):
+                        print(header + "Skipping IR source " + str(s) + " because it is non-functional")
+                
+                # Fill
+                for chip in range(number_of_chips):
+                    if chip in working_detectors:
+                        final[s][w][chip] = arr[chip][0][p]
+                    else:
+                        print(header + "Skipping detector " + str(chip) + " because it is non-functional")
+                print(header + "Filled index " + str(s) + " of final array with data from pattern " + str(p))
+                
+        
+        # Transpose to final shape [capture x source x wavelength x detector x bin]
+        final = np.transpose(final, axes=(3,0,1,2,4))
+    
         # Create time axis
         t = np.linspace(0, 149, num=150, dtype=int) * 65
         
@@ -180,7 +255,8 @@ def prepare_all_captures_for_reconstruction():
 
         ##### MATLAB #####
         working_detectors_matlab = [i+1 for i in working_detectors]
-        working_sources_matlab = [i+1 for i in working_sources]
+        working_nir_sources_matlab = [i+1 for i in working_nir_sources]
+        working_ir_sources_matlab = [i+1 for i in working_ir_sources]
 
         # Create dictionary for save
         ddict = {}
@@ -194,7 +270,8 @@ def prepare_all_captures_for_reconstruction():
         ddict['number_of_detectors'] = number_of_chips
         ddict['number_of_sources'] = patterns_per_frame
         ddict['functional_detectors'] = working_detectors_matlab
-        ddict['functional_sources'] = working_sources_matlab
+        ddict['functional_nir_sources'] = working_nir_sources_matlab
+        ddict['functional_ir_sources'] = working_ir_sources_matlab
         ddict['number_of_bins'] = number_of_bins
         ddict['roi_w'] = ts['ROI Size']
         ddict['roi_l'] = ts['ROI Size']
@@ -215,20 +292,22 @@ def prepare_all_captures_for_reconstruction():
         # Create readme string
         st = \
 '''################################################### Keys ###################################################
-conditions              - Identifier for the experiment.
-t                       - Time axis for histograms (ps). Shape is (number_of_bins).
-data                    - Histogram data (raw counts). Shape is (number_of_captures, number_of_sources, number_of_detectors, number_of_bins).
-integration_time        - Integration time (s) for the histogram data in the experiment.
-capture_window          - Selected captures from original data set.
-number_of_captures      - Number of individual captures collected. 
-number_of_detectors     - Number of detectors on the 4x4 array.
-number_of_sources       - Number of sources on the 4x4 array.
-functional_sources      - The sources on the 4x4 array that are functional and were used in the experiment. 
-functional_detectors    - The detectors on the 4x4 array that are functional and were used in the experiment.
-number_of_bins          - The number of bins in a histogram.
-roi_w                   - Width of the ROI (mm).
-roi_l                   - Length of the ROI (mm).
-roi_h                   - Height of the ROI (mm).
+conditions               - Identifier for the experiment.
+t                        - Time axis for histograms (ps). Shape is (number_of_bins).
+data                     - Histogram data (raw counts). Shape is (number_of_captures, number_of_sources, number_of_wavelengths, number_of_detectors, number_of_bins).
+integration_time         - Integration time (s) for the histogram data in the experiment.
+capture_window           - Selected captures from original data set.
+number_of_captures       - Number of individual captures collected. 
+number_of_detectors      - Number of detectors on the 4x4 array.
+number_of_sources        - Number of sources on the 4x4 array.
+number_of_wavelengths    - Number of wavelengths on the 4x4 array.
+functional_sources       - The sources on the 4x4 array that are functional and were used in the experiment. 
+functional_nir_detectors - The NIR detectors on the 4x4 array that are functional and were used in the experiment.
+functional_ir_detectors  - The IR detectors on the 4x4 array that are functional and were used in the experiment.
+number_of_bins           - The number of bins in a histogram.
+roi_w                    - Width of the ROI (mm).
+roi_l                    - Length of the ROI (mm).
+roi_h                    - Height of the ROI (mm).
 
 ############################################ Source/Detector Mapping ############################################
  ___________________
@@ -246,14 +325,16 @@ roi_h                   - Height of the ROI (mm).
 |____|____|____|____|
 
 ############################################ Examples ############################################
-In Matlab, to plot the histogram between Source Location 1 and Detector Location 9 for Capture 20:
+In Matlab, to plot the NIR histogram between Source Location 1 and Detector Location 9 for Capture 20:
 --> source_location = 1;
+--> wavelength = 1;
 --> detector_location = 9;
 --> capture = 20;
 --> plot(t, squeeze(data(capture, source_location, detector_location, :)));
 
 The plots should have nonzero values if source is found in functional_sources. 
 If a source is not found in functional_sources, this means that the source was not working or not used in the experiment, and the histogram data will be all 0s.
+Please note that for the wavelength axis, index 1 is NIR and index 2 is IR.
         '''
         
         # Save a readme file
@@ -282,7 +363,8 @@ If a source is not found in functional_sources, this means that the source was n
                             number_of_captures = number_of_captures, \
                             number_of_detectors = number_of_chips, \
                             number_of_sources = patterns_per_frame, \
-                            functional_sources = working_sources, \
+                            functional_nir_sources = working_nir_sources, \
+                            functional_ir_sources = working_ir_sources, \
                             functional_detectors = working_detectors, \
                             number_of_bins = number_of_bins, \
                             roi_w = ts['ROI Size'], \
@@ -295,20 +377,22 @@ If a source is not found in functional_sources, this means that the source was n
         # Create readme string
         st = \
 '''################################################### Keys ###################################################
-conditions              - Identifier for the experiment.
-t                       - Time axis for histograms (ps). Shape is (number_of_bins).
-data                    - Histogram data (raw counts). Shape is (number_of_captures, number_of_sources, number_of_detectors, number_of_bins).
-integration_time        - Integration time (s) for the histogram data in the experiment. 
-capture_window          - Selected captures from original data set.
-number_of_captures      - Number of individual captures collected. 
-number_of_detectors     - Number of detectors on the 4x4 array.
-number_of_sources       - Number of sources on the 4x4 array.
-functional_sources      - The sources on the 4x4 array that are functional and were used in the experiment. 
-functional_detectors    - The detectors on the 4x4 array that are functional and were used in the experiment.
-number_of_bins          - The number of bins in a histogram.
-roi_w                   - Width of the ROI (mm).
-roi_l                   - Length of the ROI (mm).
-roi_h                   - Height of the ROI (mm).
+conditions               - Identifier for the experiment.
+t                        - Time axis for histograms (ps). Shape is (number_of_bins).
+data                     - Histogram data (raw counts). Shape is (number_of_captures, number_of_sources, number_of_wavelengths, number_of_detectors, number_of_bins).
+integration_time         - Integration time (s) for the histogram data in the experiment. 
+capture_window           - Selected captures from original data set.
+number_of_captures       - Number of individual captures collected. 
+number_of_detectors      - Number of detectors on the 4x4 array.
+number_of_sources        - Number of sources on the 4x4 array.
+number_of_wavelengths    - Number of wavelengths on the 4x4 array.
+functional_nir_detectors - The NIR detectors on the 4x4 array that are functional and were used in the experiment.
+functional_ir_detectors  - The IR detectors on the 4x4 array that are functional and were used in the experiment.
+functional_detectors     - The detectors on the 4x4 array that are functional and were used in the experiment.
+number_of_bins           - The number of bins in a histogram.
+roi_w                    - Width of the ROI (mm).
+roi_l                    - Length of the ROI (mm).
+roi_h                    - Height of the ROI (mm).
 
 ############################################ Source/Detector Mapping ############################################
  ___________________
@@ -329,12 +413,14 @@ roi_h                   - Height of the ROI (mm).
 In Python, array indexes start at 0, so source and detector locations are adjusted so that they start at 0. 
 To plot the NIR histogram between Source Location 1 and Detector Location 9 for Capture 20:
 --> source_location = 1
+--> wavelength = 0
 --> detector_location = 9
 --> capture = 20
---> plot(t, data[capture][source_location][detector_location])
+--> plot(t, data[capture][source_location][wavelength][detector_location])
 
 The plot should have nonzero values if source is found in functional_sources. 
 If source is not found in functional_sources, this means that the source was not working or not used in the experiment, and the histogram data will be all 0s.
+Please note that for the wavelength axis, index 0 is NIR and index 1 is IR.
         '''
             
         # Save a readme file
