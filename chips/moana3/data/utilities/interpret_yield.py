@@ -17,6 +17,9 @@ def interpret_yield():
     nir_s = None
     ir_s = None
     
+    # Legacy support
+    legacy = False
+    
     for l in ll:
         
         if 'detectors' in l:
@@ -39,4 +42,15 @@ def interpret_yield():
             t = l.split('=')[1].split(',')
             ir_s = [int(t[i]) for i in range(len(t))]
             
-    return nir_s, ir_s, d
+        # Legacy support for old yield files
+        elif 'sources' in l:
+            legacy=True
+            
+            # Process line
+            t = l.split('=')[1].split(',')
+            s = [int(t[i]) for i in range(len(t))]
+            
+    if legacy:
+        return s, d
+    else:
+        return nir_s, ir_s, d
