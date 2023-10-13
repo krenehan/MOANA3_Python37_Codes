@@ -21,22 +21,13 @@ from interpret_dynamic_packet import interpret_dynamic_packet
 from process_triggers import process_triggers
 
 
-def py2nirs(sd_filepath, capture_window = None):
-    
-    # SD indexing (the ones that I know)
-    WAVELENGTH = 0
-    SRC_POSITION = 1
-    DET_POSITION = 2
-    DUMMY_POSITION = 3
-    NUM_SRC = 13
-    NUM_DET = 14
-    MEAS_LIST = 18
-    SPRINGS = 20
-    ANCHORS = 21
-    MEAS_UNIT = 23
+def py2nirs(sd_filepath, capture_window = None, force_rerun=False):
     
     # File to generate
-    nirs_file_name = 'data_r1.nirs'
+    cw_nirs_file_name = 'cw_r1.nirs'
+    m1_nirs_file_name = "m1_r1.nirs"
+    m2_nirs_file_name = "m2_r1.nirs"
+    td_nirs_file_name = 'tddata_r1.nirs'
     
     # This directory
     this_dir = os.path.basename(os.getcwd())
@@ -54,9 +45,12 @@ def py2nirs(sd_filepath, capture_window = None):
     print(header + "Starting")
     
     # Check if file has already been generated
-    if nirs_file_name in filelist:
-        print(header + nirs_file_name + " already generated")
-        return 1
+    if cw_nirs_file_name in filelist:
+        print(header + cw_nirs_file_name + " already generated")
+        if force_rerun:
+            print(header + " forcing rerun")
+        else:
+            return 1
     
     # Check that SD file was provided
     if sd_filepath is None:
@@ -74,7 +68,7 @@ def py2nirs(sd_filepath, capture_window = None):
         return -1
         
     # Get map of flattened indices
-    flat_index_map = np.transpose(sd[0][0][MEAS_LIST], axes=(1,0))
+    flat_index_map = np.transpose(sd['MeasList'][0][0], axes=(1,0))
     
     # Check for capture window
     if capture_window == None:
@@ -151,6 +145,7 @@ def py2nirs(sd_filepath, capture_window = None):
     fps = 1 / t_step
     elapsed_t = np.arange(0, number_of_captures * number_of_frames * t_step, t_step)
     t_ps = np.arange(0, number_of_bins*65, 65)
+    t_s = t_ps / 1e12
     
     # Transpose to bin:capture:frame:source:detector, zero out bin 0, tranpose back
     capture_data = np.transpose(capture_data, axes=(4, 0, 1, 2, 3))
@@ -227,10 +222,44 @@ def py2nirs(sd_filepath, capture_window = None):
         print(header + "Filled index for source {} of final array with NIR data from pattern {} and IR data from pattern {}".format(s, nir_idx, ir_idx))
     
     # Integrate bins, reshape to flatten, transpose
-    final = np.sum(final, axis=4)
+    cw = np.sum(final, axis=4)
+    
+    # Get epsilon
+    eps = np.finfo(final.dtype).eps
+    
+    # Number of moments
+    number_of_moments = 3
+    
+    # Calculate zeroeth moment data
+    m0 = np.sum(final, axis=4)
+    m0[np.where(np.isclose(m0, 0.0))] = eps
+    m0 = -np.log(m0)
+    
+    # Replicate the time axis for first and second moment calculation
+    t_rep = np.repeat(t_s, repeats=len(final.flat)//len(t_s))
+    t_rep = np.reshape(t_rep, (len(t_s), len(final.flat)//len(t_s)))
+    t_rep = np.transpose(t_rep).flat
+    t_rep = np.reshape(t_rep, newshape=np.shape(final))
+    
+    # Calculate first moment data
+    m1 = np.zeros_like(m0)
+    m1 = np.divide(np.sum(np.multiply(t_s, final), axis=4), np.sum(final, axis=4), where=np.sum(final, axis=4)>0)
+    m1[np.where(np.isclose(m1*1e12, 0.0))] = eps/1e12
+    homer3_m1 = np.exp(-m1*1e9)
+    
+    # Calculate the second moment data
+    m2 = np.zeros_like(m1)
+    m2 = np.divide(np.sum(np.multiply(np.square(t_rep), final), axis=4), np.sum(final, axis=4), where=np.sum(final, axis=4)>0)
+    valid_idcs = np.where(~np.isclose(m2, 0.0))
+    m2[valid_idcs] = m2[valid_idcs] - np.square(m1[valid_idcs])
+    m2[np.where(np.isclose(m2*1e24, 0.0))] = eps/1e24
+    homer3_m2 = np.exp(-m2*1e17)
     
     # Remap into flattened array, tranpose to shape source*detector*wavelength, timepoints
-    flattened_arr = np.zeros((number_of_chips * number_of_chips * number_of_wavelengths, number_of_captures), dtype=final.dtype)
+    flattened_cw_arr = np.zeros((number_of_chips * number_of_chips * number_of_wavelengths, number_of_captures), dtype=cw.dtype)
+    flattened_m1_arr = np.zeros((number_of_chips * number_of_chips * number_of_wavelengths, number_of_captures), dtype=m2.dtype)
+    flattened_m2_arr = np.zeros((number_of_chips * number_of_chips * number_of_wavelengths, number_of_captures), dtype=m2.dtype)
+    flattened_td_arr = np.zeros((number_of_chips * number_of_chips * number_of_wavelengths, number_of_moments, number_of_captures), dtype=m2.dtype)
     
     # Fill flattened array
     for s in range(number_of_chips):
@@ -247,10 +276,26 @@ def py2nirs(sd_filepath, capture_window = None):
                     
                 # Fill
                 # print(header + "Filled index {} of flattened array with data from source {}, detector {}, wavelength {}".format(idx, s, d, w))
-                flattened_arr[idx] = final[s][w][d]
+                flattened_cw_arr[idx] = cw[s][w][d]
+                flattened_m1_arr[idx] = homer3_m1[s][w][d]
+                flattened_m2_arr[idx] = homer3_m2[s][w][d]
+                flattened_td_arr[idx][0] = m0[s][w][d]
+                flattened_td_arr[idx][1] = m1[s][w][d]
+                flattened_td_arr[idx][2] = m2[s][w][d]
                 
     # Transpose to shape number_of_captures x sources*detectors*wavelengths
-    flattened_arr = np.transpose(flattened_arr, axes=(1,0))
+    flattened_cw_arr = np.transpose(flattened_cw_arr, axes=(1,0))
+    flattened_m1_arr = np.transpose(flattened_m1_arr, axes=(1,0))
+    flattened_m2_arr = np.transpose(flattened_m2_arr, axes=(1,0))
+    
+    # Transpose to shape number_of_moments x sources*detectors*wavelenths x number_of_captures
+    flattened_td_arr = np.transpose(flattened_td_arr, axes=(1,0,2))
+    
+    # Stack channels
+    flattened_td_arr = np.vstack(flattened_td_arr)
+    
+    # Transpose to number_of_captures x number_of_moments*sources*detectors*wavelengths
+    flattened_td_arr = np.transpose(flattened_td_arr)
     
     # Look for events.tsv file, first_capture.txt, and stim_timing.tsv files
     trigger_file_dict = {'events.tsv': 'events.tsv' in filelist, \
@@ -305,15 +350,36 @@ def py2nirs(sd_filepath, capture_window = None):
     
     # Create dictionary for save
     ddict = {}
-    ddict['d'] = flattened_arr
+    ddict['d'] = flattened_cw_arr
     ddict['s'] = s_arr
     ddict['SD'] = sd
     ddict['t'] = elapsed_t
     ddict['aux'] = aux
         
     # Save accumulated results
-    print(header + "Saving " + nirs_file_name + " file")
-    savemat(nirs_file_name, ddict, appendmat=False, oned_as='column')
+    print(header + "Saving " + cw_nirs_file_name + " file")
+    savemat(cw_nirs_file_name, ddict, appendmat=False, oned_as='column')
+    
+    # Change data to m1
+    ddict['d'] = flattened_m1_arr
+    
+    # Save accumulated results
+    print(header + "Saving " + m1_nirs_file_name + " file")
+    savemat(m1_nirs_file_name, ddict, appendmat=False, oned_as='column')
+    
+    # Change data to m1
+    ddict['d'] = flattened_m2_arr
+    
+    # Save accumulated results
+    print(header + "Saving " + m2_nirs_file_name + " file")
+    savemat(m2_nirs_file_name, ddict, appendmat=False, oned_as='column')
+    
+    # Change data to time domain
+    ddict['d'] = flattened_td_arr
+    
+    # Save accumulated results
+    print(header + "Saving " + td_nirs_file_name + " file")
+    savemat(td_nirs_file_name, ddict, appendmat=False, oned_as='column')
     
     # Done
     print(header + "Done")
@@ -347,7 +413,7 @@ if __name__ in '__main__':
         raise Exception("SD file not provided")
     
     # Run function
-    py2nirs(sd_filepath, capture_window = capture_window)
+    py2nirs(sd_filepath, capture_window = capture_window, force_rerun=True)
     
     
             
