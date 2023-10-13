@@ -26,7 +26,7 @@ def prepare_for_reconstruction(capture_window = None):
     this_dir = os.path.basename(os.getcwd())
     
     # This function
-    this_func = "prepare_hbo2_for_reconstruction"
+    this_func = "prepare_for_reconstruction"
     
     # Print header
     header = "    " + this_func + " in " + this_dir + ": "
