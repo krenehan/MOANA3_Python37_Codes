@@ -20,6 +20,7 @@ from interpret_test_setup import interpret_test_setup
 from interpret_dynamic_packet import interpret_dynamic_packet
 from interpret_yield import interpret_yield
 from process_triggers import process_triggers
+import sys
 
 
 def prepare_hbo2_for_reconstruction(capture_window = None, breath_hold_window = None):
@@ -78,7 +79,7 @@ def prepare_hbo2_for_reconstruction(capture_window = None, breath_hold_window = 
         if capture_window_specified:
             breath_hold_window = breath_hold_window - capture_window[0]
     else:
-        breath_hold_window = ()
+        breath_hold_window = None
 
     # Directory info
     l = os.listdir()
@@ -216,6 +217,10 @@ def prepare_hbo2_for_reconstruction(capture_window = None, breath_hold_window = 
     # Create final array [source][wavelength][detector][capture][bin]
     final = np.zeros((number_of_chips, number_of_wavelengths, number_of_chips, number_of_captures, number_of_bins), dtype=float)
     
+    # Create ir_final and nir_final for matlab file
+    nir_final = np.transpose(final, axes=(1,0,2,3,4))[0]
+    ir_final = np.transpose(final, axes=(1,0,2,3,4))[1]
+    
     # Fill final array
     print(header + "Filling output array")
     for s in range(number_of_chips):
@@ -311,10 +316,11 @@ def prepare_hbo2_for_reconstruction(capture_window = None, breath_hold_window = 
     else:
         
         # Create fake variables
-        number_of_stimuli = None
-        stim_onset = None
-        stim_boxcar = None
-        stim_dict = None
+        number_of_stimuli = 0
+        stim_onset = 0
+        stim_boxcar = 0
+        stim_dict = 0
+        stim_dict_mat = 0
 
 
     ##### MATLAB #####
@@ -322,39 +328,45 @@ def prepare_hbo2_for_reconstruction(capture_window = None, breath_hold_window = 
     working_nir_sources_matlab = [i+1 for i in working_nir_sources]
     working_ir_sources_matlab = [i+1 for i in working_ir_sources]
     breath_hold_window_matlab = (breath_hold_window[0] + 1, breath_hold_window[1] + 1) if breath_hold_window_specified else ()
-
-    # Create dictionary for save
-    ddict = {}
-    ddict['conditions'] = ts['Conditions']
-    ddict['hist_t'] = hist_t
-    ddict['hist_data'] = final
-    ddict['exp_t'] = exp_t
-    ddict['cw_data'] = cw_data
-    ddict['integration_time'] = it
-    ddict['capture_rate'] = fps
-    ddict['number_of_captures'] = number_of_captures
-    ddict['capture_window'] = (capture_window[0]+1, capture_window[1])
-    ddict['breath_hold_window'] = breath_hold_window_matlab
-    ddict['number_of_detector_locations'] = number_of_chips
-    ddict['number_of_source_locations'] = patterns_per_frame
-    ddict['nir_source_wavelength'] = '680nm'
-    ddict['ir_source_wavelength'] = '850nm'
-    ddict['nir_source_array_index'] = 1
-    ddict['ir_source_array_index'] = 2
-    ddict['functional_detectors'] = working_detectors_matlab
-    ddict['functional_nir_sources'] = working_nir_sources_matlab
-    ddict['functional_ir_sources'] = working_ir_sources_matlab
-    ddict['number_of_bins'] = number_of_bins
-    ddict['patch_location'] = ts['Patch Location']
-    ddict['test_type'] = ts['Test Type']
-    ddict['number_of_stimuli'] = number_of_stimuli
-    ddict['stim_onset'] = stim_onset
-    ddict['stim_boxcar'] = stim_boxcar
-    ddict['stim_dict'] = stim_dict_mat
+    
+    # For MATLAB files, we need to check that the array is not too large to save
+    if sys.getsizeof(final) > ((2**32)*2-1):
+        print(header + "Cannot save .mat file because hist_data variable is too large")
+    else:
         
-    # Save accumulated results
-    print(header + "Saving averaged .mat file")
-    savemat(filestring + '.mat', ddict)
+        # Create dictionary for save
+        ddict = {}
+        ddict['conditions'] = ts['Conditions']
+        ddict['hist_t'] = hist_t
+        ddict['nir_hist_data'] = nir_final
+        ddict['ir_hist_data'] = ir_final
+        ddict['exp_t'] = exp_t
+        ddict['cw_data'] = cw_data
+        ddict['integration_time'] = it
+        ddict['capture_rate'] = fps
+        ddict['number_of_captures'] = number_of_captures
+        ddict['capture_window'] = (capture_window[0]+1, capture_window[1])
+        ddict['breath_hold_window'] = breath_hold_window_matlab
+        ddict['number_of_detector_locations'] = number_of_chips
+        ddict['number_of_source_locations'] = patterns_per_frame
+        ddict['nir_source_wavelength'] = '680nm'
+        ddict['ir_source_wavelength'] = '850nm'
+        ddict['nir_source_array_index'] = 1
+        ddict['ir_source_array_index'] = 2
+        ddict['functional_detectors'] = working_detectors_matlab
+        ddict['functional_nir_sources'] = working_nir_sources_matlab
+        ddict['functional_ir_sources'] = working_ir_sources_matlab
+        ddict['number_of_bins'] = number_of_bins
+        ddict['patch_location'] = ts['Patch Location']
+        ddict['test_type'] = ts['Test Type']
+        ddict['number_of_stimuli'] = number_of_stimuli
+        ddict['stim_onset'] = stim_onset
+        ddict['stim_boxcar'] = stim_boxcar
+        ddict['stim_dict'] = stim_dict_mat
+            
+        # Save accumulated results
+        print(header + "Saving averaged .mat file")
+        savemat(filestring + '.mat', ddict)
     
     # Create readme string
     st = \
@@ -362,7 +374,8 @@ def prepare_hbo2_for_reconstruction(capture_window = None, breath_hold_window = 
 conditions                        - Identifier for the experiment.
 hist_t                            - Time axis for histograms (ps). Shape is (number_of_bins).
 exp_t                             - Time axis for entire experiment (s). Shape is (number_of_captures).
-hist_data                         - Histogram data (raw counts). Shape is (number_of_sources, number_of_wavelengths, number_of_detectors, number_of_captures, number_of_bins).
+nir_hist_data                     - Histogram data (raw counts) for NIR wavelength. Shape is (number_of_sources, number_of_detectors, number_of_captures, number_of_bins).
+ir_hist_data                      - Histogram data (raw counts) for IR wavelength. Shape is (number_of_sources, number_of_detectors, number_of_captures, number_of_bins).
 cw_data                           - Integrated histogram data (CW). Shape is (number_of_sources, number_of_wavelengths, number_of_detectors, number_of_captures).
 integration_time                  - Integration time (s) per source for the histogram data in the experiment.
 capture_rate                      - Captures per second. One capture is defined as all source/detector pairs at both wavelengths.
@@ -404,10 +417,21 @@ stim_dict                         - Struct containing index of each stimuli in s
 ############################################ Examples ############################################
 In Matlab, to plot the NIR histogram between Source Location 1 and Detector Location 9 for Capture 20:
 --> source_location = 1;
---> wavelength_index = 1;
 --> detector_location = 9;
 --> capture = 20;
---> plot(hist_t, squeeze(hist_data(source_location, wavelength_index, detector_location, capture, :)));
+--> plot(hist_t, squeeze(nir_hist_data(source_location, detector_location, capture, :)));
+
+In Matlab, to plot the IR histogram between Source Location 2 and Detector Location 10 for Capture 24:
+--> source_location = 2;
+--> detector_location = 10;
+--> capture = 24;
+--> plot(hist_t, squeeze(ir_hist_data(source_location, detector_location, capture, :)));
+
+In Matlab, to plot the NIR CW time trace between Source 1 and Detector 9 over the entire experiment:
+--> source_location = 1;
+--> wavelength_index = 1;
+--> detector_location = 9;
+--> plot(exp_t, squeeze(cw_data(source_location, wavelength_index, detector_location, :)));
 
 In Matlab, to plot the IR CW time trace between Source 1 and Detector 9 over the entire experiment:
 --> source_location = 1;
