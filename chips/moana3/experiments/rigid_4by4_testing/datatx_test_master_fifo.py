@@ -95,7 +95,7 @@ try:
     patt_per_frame                  = 1
     number_of_frames                = 1
     period                              = round(1/refclk_freq*1e9, 1)
-    pad_captured_mask               = 0b1111111111111111
+    pad_captured_mask               = 0b1111111111111011
 
     
     
@@ -177,7 +177,7 @@ try:
     scan_bits = [dut.chip_infrastructure.get_scan_chain(row[i]).get_scan_chain_segment(cell) for i in range(number_of_chips)]
     
     # Receive array
-    packet = DataPacket.DataPacket(number_of_chips, number_of_frames, patt_per_frame, meas_per_patt, period, compute_mean=False)
+    packet = DataPacket.DataPacket(number_of_chips, number_of_frames, patt_per_frame, meas_per_patt, period, compute_mean=False, datatx_mode=True)
         
     # Test pattern in, test pattern out loop
     for DataIn in range(1, 1023, 8):
