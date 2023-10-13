@@ -25,7 +25,7 @@ import DynamicPacket
 os.chdir(this_dir)
 
 
-def prepare_all_captures_for_reconstruction():
+def prepare_all_captures_for_reconstruction(capture_window = None):
     
     # This directory
     this_dir = os.path.basename(os.getcwd())
@@ -273,11 +273,11 @@ def prepare_all_captures_for_reconstruction():
         ddict['functional_nir_sources'] = working_nir_sources_matlab
         ddict['functional_ir_sources'] = working_ir_sources_matlab
         ddict['number_of_bins'] = number_of_bins
-        ddict['roi_w'] = ts['ROI Size']
-        ddict['roi_l'] = ts['ROI Size']
-        ddict['roi_h'] = ts['ROI Size']
-        # ddict['roi_ua'] = float(ts['ROI ua'])
-        # ddict['laser_wavelength'] = int(ts['Laser Wavelength'])
+        ddict['roi_w'] = ts['ROI Size'] if 'ROI Size' in ts.keys() else 0
+        ddict['roi_l'] = ts['ROI Size'] if 'ROI Size' in ts.keys() else 0
+        ddict['roi_h'] = ts['ROI Size'] if 'ROI Size' in ts.keys() else 0
+        ddict['roi_ua'] = float(ts['ROI ua']) if 'ROI ua' in ts.keys() else 0
+        ddict['laser_wavelength'] = int(ts['Laser Wavelength']) if 'Laser Wavelength' in ts.keys() else 0
         
         # Filename
         if capture_window_specified:
@@ -352,6 +352,10 @@ Please note that for the wavelength axis, index 1 is NIR and index 2 is IR.
         #     for d in range(len(ax)):
         #         ax[d].plot(t, acc_shuffled[s][d])
         
+        roi_size = ts['ROI Size'] if 'ROI Size' in ts.keys() else 0
+        roi_ua = ts['ROI ua'] if 'ROI ua' in ts.keys() else 0
+        laser_wavelength = ts['Laser Wavelength'] if 'Laser Wavelength' in ts.keys() else 0
+        
         print(header + "Saving .npz file")
         np.savez_compressed ( \
                             filestring, \
@@ -367,11 +371,11 @@ Please note that for the wavelength axis, index 1 is NIR and index 2 is IR.
                             functional_ir_sources = working_ir_sources, \
                             functional_detectors = working_detectors, \
                             number_of_bins = number_of_bins, \
-                            roi_w = ts['ROI Size'], \
-                            roi_l = ts['ROI Size'], \
-                            roi_h = ts['ROI Size'], \
-                            # roi_ua = float(ts['ROI ua']), \
-                            # laser_wavelength = int(ts['Laser Wavelength']) \
+                            roi_w = roi_size, \
+                            roi_l = roi_size, \
+                            roi_h = roi_size, \
+                            roi_ua = float(roi_ua), \
+                            laser_wavelength = int(laser_wavelength) \
                             )
         
         # Create readme string
