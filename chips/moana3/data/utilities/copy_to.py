@@ -19,14 +19,18 @@ relevant_files = ( \
                     'yield.txt', \
                     # 'averaged.npz', \
                     'events.tsv', \
+                    # 'stim_protocol.tsv', \
+                    # 'stim_timing.tsv', \
                     'first_capture.txt', \
+                    # 'stim.npz', \
+                    # 'data_r1.nirs', \
                 )
     
 # Get the directory to copy
 to_copy_dir = easygui.diropenbox(title="Choose directory to copy from", default=os.path.abspath("C:/Users/Dell-User/Downloads"))
 
 # Get the directory to copy to
-copy_to_dir = easygui.diropenbox(title="Choose directory to copy to", default=os.path.abspath("C:/Users/Dell-User/Dropbox/MOANA/2020 January Tapeout/MOANA2 Python Codes/MOANA2_Python37_Codes/chips/moana2/data"))
+copy_to_dir = easygui.diropenbox(title="Choose directory to copy to", default=os.path.abspath("C:/Users/Dell-User/Dropbox/MOANA/Python/MOANA2 Python Codes/MOANA3_Python37_Codes/chips/moana3/data"))
 
 # Change working directory
 os.chdir(to_copy_dir)
