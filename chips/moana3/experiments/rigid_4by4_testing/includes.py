@@ -31,9 +31,10 @@ class TestingPaths:
             # 'MOANA3_INTERNAL_CLOCKS_50MHz_nopadreverse.bit') # Uncomment line for internal clock
             # 'MOANA3_INTERNAL_CLOCKS_50MHz_noreverse.bit') # Uncomment line for internal clock
             # 'MOANA3_INTERNAL_CLOCKS_50MHz_fullchain.bit') # Uncomment line for internal clock
-            'MOANA3_RIGID4BY4_INTERNAL_CLOCKS_6MHz.bit')
+            # 'MOANA3_RIGID4BY4_INTERNAL_CLOCKS_6MHz.bit')
              # 'MOANA3_RIGID2BY1_INTERNAL_CLOCKS_RAM_CONTROLLER_6MHz.bit')
             # 'MOANA3_RIGID4BY4_INTERNAL_FRAME_ARBITER_V2.bit')
+            "MOANA3_FLEX4BY4_INTERNAL_CLOCKS_6MHz.bit")
             # 'MOANA3_EXTERNAL_REFCLK.bit') # Uncomment line for external laser clock
 
 
