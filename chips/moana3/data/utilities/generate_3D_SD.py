@@ -20,6 +20,9 @@ sd_3D = r'C:\Users\Dell-User\Dropbox\MOANA\Homer3\new_moana3_probe\MOANA3_RIGIDF
 txt_3D = r'C:\Users\Dell-User\Downloads\dummy\probe_reg.txt'
 
 # SD indexing (the ones that I know)
+# TODO: Indexing is the wrong way to do this. SD is a structured array, meaning that
+# it can be accessed via field names instead of through indexes, which may change
+# depending on what is included in the file.
 WAVELENGTH = 0
 SRC_POSITION = 1
 DET_POSITION = 2
