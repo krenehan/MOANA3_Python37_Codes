@@ -36,7 +36,7 @@ class DataPacket:
     # ====================================================
     # Initialize the data packet
     # ====================================================
-    def __init__(self, number_of_chips, number_of_frames, patterns_per_frame, measurements_per_pattern, period, compute_mean=True):
+    def __init__(self, number_of_chips, number_of_frames, patterns_per_frame, measurements_per_pattern, period, compute_mean=True, datatx_mode=False):
         
         # Initialize class variables
         self.__number_of_chips = number_of_chips
@@ -44,6 +44,7 @@ class DataPacket:
         self.__patterns_per_frame = patterns_per_frame
         self.__measurements_per_pattern = measurements_per_pattern
         self.__period = period
+        self.__datatx_mode = datatx_mode
         
         # Calculate receive array size
         self.__receive_array_size = self.__number_of_frames*self.__patterns_per_frame*self.__number_of_chips*self.__bins_per_histogram
@@ -92,9 +93,10 @@ class DataPacket:
             a = mean(a, axis=(1,), keepdims=True, dtype=int)
             
         # Zero out the zeroeth bin
-        a = transpose(a, axes=(3,0,1,2))
-        a[0].fill(0)
-        a = transpose(a, axes=(1,2,3,0))
+        if not self.__datatx_mode:
+            a = transpose(a, axes=(3,0,1,2))
+            a[0].fill(0)
+            a = transpose(a, axes=(1,2,3,0))
             
         # Store
         self.__morphed_array = a
