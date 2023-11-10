@@ -369,6 +369,9 @@ class PlotWindow(QtWidgets.QMainWindow):
         # Pass the logo to the test setup window
         self.test_setup_struct.logo_path = self.logo_path
         
+        # Status of plot format
+        self.plot_format_hist = True
+        
         # Print thread for main window
         logthread('mainwin.__init__')
         
@@ -735,14 +738,19 @@ class PlotWindow(QtWidgets.QMainWindow):
                                              self.data_packet.bins_per_histogram), \
                                              dtype=int)
             
+        # Ensure that we get at least 30s of data in the time trace
+        screen_time = self.test_setup_struct.number_of_captures * self.test_setup_struct.number_of_frames * self.test_setup_struct.frame_time
+        if screen_time < 30:
+            multiplier = int(30/screen_time)
+            
         # Time axis for time trace plotting
         self.time_x = np.arange(0, self.test_setup_struct.number_of_captures * \
                                       self.test_setup_struct.number_of_frames * \
-                                      self.test_setup_struct.frame_time, self.test_setup_struct.frame_time, dtype=float)
+                                      self.test_setup_struct.frame_time * multiplier, self.test_setup_struct.frame_time, dtype=float)
         
         # Data structure for time trace plotting
         self.time_y = np.empty(( \
-                                             self.test_setup_struct.number_of_captures * self.data_packet.number_of_frames, \
+                                             self.test_setup_struct.number_of_captures * self.data_packet.number_of_frames* multiplier, \
                                              self.data_packet.number_of_chips, \
                                              self.data_packet.patterns_per_frame), \
                                              dtype=float)
@@ -837,7 +845,7 @@ class PlotWindow(QtWidgets.QMainWindow):
             if self.frame_to_plot_counter < self.test_setup_struct.number_of_frames - 1:
                 self.frame_to_plot_counter = self.frame_to_plot_counter + 1
             else:
-                self.frame_to_plot_counter = 0
+                # self.frame_to_plot_counter = 0
                 print("rollover for capture " + str(self.capture_number))
             
             # Spawn subplots
@@ -849,8 +857,9 @@ class PlotWindow(QtWidgets.QMainWindow):
                     # Set log plotting
                     self.plot_list[chip].setLogMode(y=self.log_plotting)
                 
-                # Downsample
-                self.plot_list[chip].setDownsampling(ds=1, auto=False, mode='subsample')
+                # Downsample if time trace
+                if not self.plot_format_hist:
+                    self.plot_list[chip].setDownsampling(ds=1, auto=True, mode='subsample')
                 
                 # # Plot the target pattern data
                 if chip in self.emitters_in_pattern:
@@ -923,6 +932,9 @@ class PlotWindow(QtWidgets.QMainWindow):
         self.plot_x = self.time_x_plot_func
         self.plot_y = self.time_y_plot_func
         
+        # Status indicator
+        self.plot_format_hist = False
+        
         # Enable reset button
         self.ui.resetTimeTraceButton.setEnabled(True)
             
@@ -950,6 +962,9 @@ class PlotWindow(QtWidgets.QMainWindow):
         # Pointers for x and y data for plotting
         self.plot_x = self.hist_x_plot_func
         self.plot_y = self.hist_y_plot_func
+        
+        # Status indicator
+        self.plot_format_hist = True
         
         # Disable reset button
         self.ui.resetTimeTraceButton.setEnabled(False)
@@ -1097,14 +1112,26 @@ class PlotWindow(QtWidgets.QMainWindow):
         
         # Time trace reset triggers the time vector to reset
         if self.reset_time_trace_caught:
+            self.time_x = self.time_x + self.time_y_index * self.test_setup_struct.frame_time
             self.time_y_index = 0
             self.time_y.fill(np.nan)
             self.reset_time_trace_caught = False
             
         # Accumulate data in the time structure
-        if self.time_y_index + self.test_setup_struct.number_of_frames < len(self.time_y):
+        if self.time_y_index < len(self.time_y):
+            
+            # Place in time array and update index pointer
             self.time_y[self.time_y_index: self.time_y_index + self.test_setup_struct.number_of_frames] = np_arr
             self.time_y_index = self.time_y_index + self.test_setup_struct.number_of_frames
+        else: 
+            
+            # Roll
+            self.time_y = np.roll(self.time_y, len(self.time_y) - self.test_setup_struct.number_of_frames, axis=0)
+            self.time_y[len(self.time_y) - self.test_setup_struct.number_of_frames: len(self.time_y)] = np_arr
+            
+            # Update time axis
+            self.time_x = self.time_x + (self.test_setup_struct.number_of_frames * self.test_setup_struct.frame_time)
+            
         
         # Update
         self.reader_sent_new_data = True
