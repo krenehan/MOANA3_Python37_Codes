@@ -1,6 +1,6 @@
 from includes import *
 import matplotlib.pyplot as plt
-from KeysightE36312A import * 
+# from KeysightE36312A import * 
 from copy import deepcopy
 
 for w in ('nir','ir'):
@@ -80,21 +80,21 @@ for w in ('nir','ir'):
             # Set the power supply setting 
             # =============================================================================
             
-            key = KeysightE36312A(0.5) 
-            key.ChannelSelect(channel)
-            key.SetOPCurrent(OC_current, channel)
-            key.SetOPvoltage(OV_voltage, channel)
-            key.ChannelEnable(power_enable)
-            key.Setvoltage(voltage, channel)
+            # key = KeysightE36312A(0.5) 
+            # key.ChannelSelect(channel)
+            # key.SetOPCurrent(OC_current, channel)
+            # key.SetOPvoltage(OV_voltage, channel)
+            # key.ChannelEnable(power_enable)
+            # key.Setvoltage(voltage, channel)
             
             # =============================================================================
             # Top-level options
             # =============================================================================
             # Enabling this will export data to log file 
-            logging = True
+            logging = False
             
             # Enabling this will show the plots as data is collected
-            plotting = False
+            plotting = True
             
             # Enabling this will show the scan settings so that they can be verified
             print_scan_results = False
@@ -531,7 +531,7 @@ for w in ('nir','ir'):
                     print("Finished blitzing histograms")
                     dut.disable_hvdd_ldo_supply()
                     dut.disable_cath_sm_supply()
-                    key.ChannelEnable(False)
+                    # key.ChannelEnable(False)
                     print("Closing FPGA")
                     dut.fpga_interface.xem.Close()
                     if data_plotter_created:

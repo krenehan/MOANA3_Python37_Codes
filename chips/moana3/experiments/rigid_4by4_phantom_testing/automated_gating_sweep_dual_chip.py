@@ -110,10 +110,10 @@ for av in range(16):
         # Top-level options
         # =============================================================================
         # Enabling this will export data to log file 
-        logging = True
+        logging = False
         
         # Enabling this will show the plots as data is collected
-        plotting = False 
+        plotting = True 
         
         # Enabling this will show the scan settings so that they can be verified
         print_scan_results = False
