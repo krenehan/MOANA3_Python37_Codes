@@ -23,6 +23,7 @@ from prepare_for_reconstruction import prepare_for_reconstruction
 from prepare_hbo2_for_reconstruction import prepare_hbo2_for_reconstruction
 from prepare_all_captures_for_reconstruction import prepare_all_captures_for_reconstruction
 from patch_geometry import patch_geometry
+from prepare_all_captures_for_reconstruction import prepare_all_captures_for_reconstruction
 from py2nirs import py2nirs
 
 
@@ -33,6 +34,7 @@ do_prepare_for_reconstruction = False
 do_prepare_hbo2_for_reconstruction = True
 do_prepare_all_captures_for_reconstruction = False
 do_patch_geometry = False
+do_prepare_all_captures_for_reconstruction = False
 do_py2nirs = False
 
 # Capture window and breath hold window for reconstruction
@@ -135,7 +137,10 @@ for sd in subdirectory_list:
         if do_py2nirs:
             print("Running py2nirs")
             sd_results_dict['py2nirs'] = get_result(py2nirs(sd_filepath, capture_window = capture_window))
-            
+        if do_prepare_all_captures_for_reconstruction:
+            print("Running prepare all captures for reconstruction")
+            sd_results_dict['prepare_all_captures_for_reconstruction'] = get_result(prepare_all_captures_for_reconstruction(capture_window = capture_window))         
+  
     # Add to top level results directory
     results_dict[sd] = sd_results_dict
     

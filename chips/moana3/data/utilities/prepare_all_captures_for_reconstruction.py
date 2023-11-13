@@ -455,4 +455,4 @@ if __name__ in '__main__':
     os.chdir(target_dir)
     
     # Run function
-    prepare_all_captures_for_reconstruction()
+    prepare_all_captures_for_reconstruction(capture_window = None)
