@@ -742,6 +742,8 @@ class PlotWindow(QtWidgets.QMainWindow):
         screen_time = self.test_setup_struct.number_of_captures * self.test_setup_struct.number_of_frames * self.test_setup_struct.frame_time
         if screen_time < 30:
             multiplier = int(30/screen_time)
+        else:
+            multiplier = 1
             
         # Time axis for time trace plotting
         self.time_x = np.arange(0, self.test_setup_struct.number_of_captures * \
