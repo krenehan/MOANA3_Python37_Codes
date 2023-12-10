@@ -22,7 +22,7 @@ from process_triggers import process_triggers
 
 
 def py2nirs(sd_filepath, capture_window = None, force_rerun=False):
-    
+
     # File to generate
     cw_nirs_file_name = 'cw_r1.nirs'
     m1_nirs_file_name = "m1_r1.nirs"
@@ -51,6 +51,7 @@ def py2nirs(sd_filepath, capture_window = None, force_rerun=False):
             print(header + " forcing rerun")
         else:
             return 1
+            pass
     
     # Check that SD file was provided
     if sd_filepath is None:
@@ -143,7 +144,7 @@ def py2nirs(sd_filepath, capture_window = None, force_rerun=False):
     # Create time parameters
     t_step = meas_per_patt * period*1e-9 * patt_per_fram
     fps = 1 / t_step
-    elapsed_t = np.arange(0, number_of_captures * number_of_frames * t_step, t_step)
+    elapsed_t = np.arange(0, number_of_captures * number_of_frames) * t_step
     t_ps = np.arange(0, number_of_bins*65, 65)
     t_s = t_ps / 1e12
     

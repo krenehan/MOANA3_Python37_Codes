@@ -100,8 +100,7 @@ def process_triggers():
     stim_protocol_tsv.to_csv(filenames[0], sep='\t', index=False)
     
     # Build a time axis
-    final_time_point = number_of_captures * number_of_frames * frame_time
-    elapsed_t = np.arange(final_time_point, step=frame_time)
+    elapsed_t = np.arange(0, number_of_captures * number_of_frames) * frame_time
     
     # Find stimuli
     stimuli = []
