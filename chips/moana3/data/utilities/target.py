@@ -31,18 +31,18 @@ from py2nirs import py2nirs
 # Options
 do_average = False
 do_prepare_for_reconstruction = False
-do_prepare_hbo2_for_reconstruction = True
+do_prepare_hbo2_for_reconstruction = False
 do_prepare_all_captures_for_reconstruction = False
 do_patch_geometry = False
-do_prepare_all_captures_for_reconstruction = False
-do_py2nirs = False
+do_py2nirs = True
+force_py2nirs_rerun = True
 
 # Capture window and breath hold window for reconstruction
 capture_window = None
 breath_hold_window = None #(600, 900)
 
 # SD structure for NIRS generation
-sd_filepath = r'C:\Users\Dell-User\Dropbox\MOANA\Homer3\new_moana3_probe\MOANA3_RIGIDFLEX_4BY4_SOMATOSENSORY_3D.SD'
+sd_filepath = r'C:\Users\Dell-User\Dropbox\MOANA\Homer3\new_moana3_probe\MOANA3_FLEX_4BY4_SOMATOSENSORY_3D.SD'
 
 
 
@@ -136,11 +136,11 @@ for sd in subdirectory_list:
             sd_results_dict['prepare_all_captures_for_reconstruction'] = get_result(prepare_all_captures_for_reconstruction(capture_window = capture_window))
         if do_py2nirs:
             print("Running py2nirs")
-            sd_results_dict['py2nirs'] = get_result(py2nirs(sd_filepath, capture_window = capture_window))
+            sd_results_dict['py2nirs'] = get_result(py2nirs(sd_filepath, capture_window = capture_window, force_rerun=force_py2nirs_rerun))
         if do_prepare_all_captures_for_reconstruction:
             print("Running prepare all captures for reconstruction")
             sd_results_dict['prepare_all_captures_for_reconstruction'] = get_result(prepare_all_captures_for_reconstruction(capture_window = capture_window))         
-  
+            
     # Add to top level results directory
     results_dict[sd] = sd_results_dict
     
