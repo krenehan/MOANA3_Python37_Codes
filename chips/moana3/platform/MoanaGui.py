@@ -21,7 +21,7 @@ from DynamicPacket import DynamicPacket
 from chip.DelayLine import DelayLine
 
 # LSL inputs
-from pylsl import StreamInlet, resolve_stream
+# from pylsl import StreamInlet, resolve_stream
 
 # Generic  imports
 import numpy as np
