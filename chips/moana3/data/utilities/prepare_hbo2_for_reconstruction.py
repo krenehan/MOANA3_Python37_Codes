@@ -23,7 +23,7 @@ from process_triggers import process_triggers
 import sys
 
 
-def prepare_hbo2_for_reconstruction(capture_window = None, breath_hold_window = None):
+def prepare_hbo2_for_reconstruction(capture_window = None, breath_hold_window = None, force_rerun=False):
     
     # This directory
     this_dir = os.path.basename(os.getcwd())
@@ -46,7 +46,7 @@ def prepare_hbo2_for_reconstruction(capture_window = None, breath_hold_window = 
     filestring = os.path.join(subdirectory_path, filename)
     
     # Check to see if we've already generated the files for this data directory
-    if os.path.exists(subdirectory_path):
+    if os.path.exists(subdirectory_path) and not force_rerun:
         l = os.listdir(subdirectory_path)
         if ((filename + '.mat') in l) and ((filename + '.npz') in l):
             
@@ -282,6 +282,10 @@ def prepare_hbo2_for_reconstruction(capture_window = None, breath_hold_window = 
     # Calculate frame rate
     fps = 1/(float(ts['Period']) * 1e-9 * float(ts['Measurements per Pattern']) * patterns_per_frame)
     
+    # Extra information
+    patch_location = ts['Patch Location'] if 'Patch Location' in ts.keys() else 'None'
+    test_type = ts['Test Type'] if 'Test Type' in ts.keys() else 'None'
+    
     # Time axis for experiment
     t_step = 1 / fps
     exp_t = np.arange(capture_window[0], capture_window[1] * t_step, t_step)
@@ -357,8 +361,8 @@ def prepare_hbo2_for_reconstruction(capture_window = None, breath_hold_window = 
         ddict['functional_nir_sources'] = working_nir_sources_matlab
         ddict['functional_ir_sources'] = working_ir_sources_matlab
         ddict['number_of_bins'] = number_of_bins
-        ddict['patch_location'] = ts['Patch Location']
-        ddict['test_type'] = ts['Test Type']
+        ddict['patch_location'] = patch_location
+        ddict['test_type'] = test_type
         ddict['number_of_stimuli'] = number_of_stimuli
         ddict['stim_onset'] = stim_onset
         ddict['stim_boxcar'] = stim_boxcar
@@ -487,8 +491,8 @@ If a NIR/IR source is not found in functional_nir_sources/functional_ir_sources,
                         functional_nir_sources = working_nir_sources_matlab, \
                         functional_ir_sources = working_ir_sources_matlab, \
                         number_of_bins = number_of_bins, \
-                        patch_location = ts['Patch Location'], \
-                        test_type = ts['Test Type'], \
+                        patch_location = patch_location, \
+                        test_type = test_type, \
                         number_of_stimuli = number_of_stimuli, \
                         stim_onset = stim_onset, \
                         stim_boxcar = stim_boxcar, \
@@ -570,10 +574,11 @@ If source is not found in functional_sources, this means that the source was not
     f.close()
     
     # Saving notes
-    print(header + "Saving notes")
-    f = open(os.path.join(subdirectory_path, "notes.txt"), "w")
-    f.write(ts['Notes'])
-    f.close()
+    if 'Notes' in ts.keys():
+        print(header + "Saving notes")
+        f = open(os.path.join(subdirectory_path, "notes.txt"), "w")
+        f.write(ts['Notes'])
+        f.close()
         
     print(header + "Done")
     return 0
@@ -591,6 +596,9 @@ if __name__ in '__main__':
     # Breath hold window
     breath_hold_window = None
     
+    # Force rerun
+    force_rerun = True
+    
     # Select a data directory
     target_dir = easygui.diropenbox(title="Choose directory containing captures file")
     
@@ -602,5 +610,5 @@ if __name__ in '__main__':
     os.chdir(target_dir)
     
     # Run function
-    prepare_hbo2_for_reconstruction(capture_window = capture_window, breath_hold_window = breath_hold_window)
+    prepare_hbo2_for_reconstruction(capture_window = capture_window, breath_hold_window = breath_hold_window, force_rerun=force_rerun)
 
