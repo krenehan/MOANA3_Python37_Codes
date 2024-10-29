@@ -301,9 +301,9 @@ number_of_captures       - Number of individual captures collected.
 number_of_detectors      - Number of detectors on the 4x4 array.
 number_of_sources        - Number of sources on the 4x4 array.
 number_of_wavelengths    - Number of wavelengths on the 4x4 array.
-functional_sources       - The sources on the 4x4 array that are functional and were used in the experiment. 
-functional_nir_detectors - The NIR detectors on the 4x4 array that are functional and were used in the experiment.
-functional_ir_detectors  - The IR detectors on the 4x4 array that are functional and were used in the experiment.
+functional_detectors     - The detectors on the 4x4 array that are functional and were used in the experiment. 
+functional_nir_sources   - The NIR sources on the 4x4 array that are functional and were used in the experiment.
+functional_ir_sources    - The IR sources on the 4x4 array that are functional and were used in the experiment.
 number_of_bins           - The number of bins in a histogram.
 roi_w                    - Width of the ROI (mm).
 roi_l                    - Length of the ROI (mm).
@@ -390,8 +390,8 @@ number_of_captures       - Number of individual captures collected.
 number_of_detectors      - Number of detectors on the 4x4 array.
 number_of_sources        - Number of sources on the 4x4 array.
 number_of_wavelengths    - Number of wavelengths on the 4x4 array.
-functional_nir_detectors - The NIR detectors on the 4x4 array that are functional and were used in the experiment.
-functional_ir_detectors  - The IR detectors on the 4x4 array that are functional and were used in the experiment.
+functional_nir_sources   - The NIR sources on the 4x4 array that are functional and were used in the experiment.
+functional_ir_sources    - The IR sources on the 4x4 array that are functional and were used in the experiment.
 functional_detectors     - The detectors on the 4x4 array that are functional and were used in the experiment.
 number_of_bins           - The number of bins in a histogram.
 roi_w                    - Width of the ROI (mm).
