@@ -31,11 +31,12 @@ from py2nirs import py2nirs
 # Options
 do_average = False
 do_prepare_for_reconstruction = False
-do_prepare_hbo2_for_reconstruction = False
+do_prepare_hbo2_for_reconstruction = True
+force_hbo2_rerun = True
 do_prepare_all_captures_for_reconstruction = False
 do_patch_geometry = False
-do_py2nirs = True
-force_py2nirs_rerun = True
+do_py2nirs = False
+force_py2nirs_rerun = False
 
 # Capture window and breath hold window for reconstruction
 capture_window = None
@@ -130,7 +131,7 @@ for sd in subdirectory_list:
             prepare_for_reconstruction(capture_window = capture_window) # None or capture_window
         if do_prepare_hbo2_for_reconstruction:
             print("Running prepare for HbO2 reconstruction")
-            sd_results_dict['prepare_hbo2_for_reconstruction'] = get_result(prepare_hbo2_for_reconstruction(capture_window = capture_window))
+            sd_results_dict['prepare_hbo2_for_reconstruction'] = get_result(prepare_hbo2_for_reconstruction(capture_window = capture_window, force_rerun=force_hbo2_rerun))
         if do_prepare_all_captures_for_reconstruction:
             print("Running prepare all captures for reconstruction")
             sd_results_dict['prepare_all_captures_for_reconstruction'] = get_result(prepare_all_captures_for_reconstruction(capture_window = capture_window))
